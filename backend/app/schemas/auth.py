@@ -1,15 +1,15 @@
-from pydantic import EmailStr, Field
+from pydantic import Field
 
 from app.schemas.common import CamelModel
 
 
 class LoginRequest(CamelModel):
-    email: EmailStr
+    email: str = Field(min_length=3)
     password: str = Field(min_length=6)
 
 
 class RegisterRequest(CamelModel):
-    email: EmailStr
+    email: str = Field(min_length=3)
     password: str = Field(min_length=6)
     full_name: str
     role: str = "farmer"
@@ -31,14 +31,14 @@ class RefreshRequest(CamelModel):
 class UserResponse(CamelModel):
     id: str
     full_name: str = Field(serialization_alias="fullName")
-    email: EmailStr
+    email: str
     role: str
     farm_ids: list[str] = Field(default_factory=list, serialization_alias="farmIds")
     district_id: str | None = Field(default=None, serialization_alias="districtId")
 
 
 class UserCreate(CamelModel):
-    email: EmailStr
+    email: str = Field(min_length=3)
     password: str = Field(min_length=6)
     full_name: str
     role: str
