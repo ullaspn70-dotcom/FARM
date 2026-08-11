@@ -100,7 +100,7 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
             <div className="success-note-box">
               <AlertTriangle size={16} />
               <span>
-                Note: In compliance with SIH260487 biosecurity guidelines, an outbreak is not declared automatically until certified veterinary inspection is completed.
+                Note: In compliance with national biosecurity guidelines, an outbreak is not declared automatically until certified veterinary inspection is completed.
               </span>
             </div>
             <button className="btn-primary-action" onClick={handleResetAndClose}>
@@ -108,8 +108,9 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
             </button>
           </div>
         ) : (
-          /* Form Content */
-          <form onSubmit={handleSubmit} className="incident-form-body">
+          /* Form Content — wrapper keeps footer actions visible while body scrolls */
+          <form onSubmit={handleSubmit} className="incident-form-wrapper">
+            <div className="incident-form-body">
             <div className="form-grid-two">
               <div className="form-group">
                 <label className="form-label">Incident Category *</label>
@@ -218,6 +219,7 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
                   </div>
                 )}
               </div>
+            </div>
             </div>
 
             <div className="form-actions-row">

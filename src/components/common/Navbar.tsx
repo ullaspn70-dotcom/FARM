@@ -25,7 +25,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
               <ShieldCheck size={26} color="#FFFFFF" />
             </div>
             <div className="brand-titles">
-              <div className="brand-tag">SIH 2026 • SIH260487</div>
               <h1 className="brand-name">AgriSentinel</h1>
               <span className="brand-sub">Digital Farm Biosecurity Platform</span>
             </div>

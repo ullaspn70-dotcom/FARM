@@ -29,7 +29,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
         <div className="mobile-drawer-header">
           <div>
             <h3 className="drawer-title">AgriSentinel Navigation</h3>
-            <span className="drawer-sub">AgriSentinel Portal • SIH260487</span>
+            <span className="drawer-sub">Digital Farm Biosecurity Portal</span>
           </div>
           <button className="drawer-close-btn" onClick={onClose} aria-label="Close drawer">
             <X size={20} />
