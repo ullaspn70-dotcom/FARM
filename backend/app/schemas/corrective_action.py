@@ -1,0 +1,42 @@
+from pydantic import Field
+
+from app.schemas.common import CamelModel
+
+
+class SubmittedEvidence(CamelModel):
+    file_url: str = Field(serialization_alias="fileUrl")
+    file_name: str = Field(serialization_alias="fileName")
+    timestamp: str
+    location: str
+    notes: str
+
+
+class CorrectiveActionResponse(CamelModel):
+    id: str
+    farm_id: str = Field(serialization_alias="farmId")
+    farm_name: str = Field(serialization_alias="farmName")
+    title: str
+    description: str
+    priority: str
+    assigned_person: str = Field(serialization_alias="assignedPerson")
+    deadline: str
+    status: str
+    evidence_required: bool = Field(serialization_alias="evidenceRequired")
+    verification_status: str = Field(serialization_alias="verificationStatus")
+    submitted_evidence: SubmittedEvidence | None = Field(default=None, serialization_alias="submittedEvidence")
+
+
+class CorrectiveActionCreate(CamelModel):
+    farm_id: str = Field(alias="farmId")
+    incident_id: str | None = Field(default=None, alias="incidentId")
+    title: str
+    description: str
+    priority: str = "medium"
+    assigned_person: str = Field(alias="assignedPerson")
+    deadline: str
+    evidence_required: bool = Field(default=True, alias="evidenceRequired")
+
+
+class ActionVerifyRequest(CamelModel):
+    approved: bool
+    notes: str | None = None
