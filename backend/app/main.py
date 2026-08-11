@@ -24,7 +24,7 @@ from app.routers import (
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
-        description="BioShield — Closed-Loop Biosecurity & Farm Response Platform API",
+        description="AgriSentinel — Digital Farm Biosecurity Platform API",
         version="1.0.0",
         docs_url="/docs",
         redoc_url="/redoc",

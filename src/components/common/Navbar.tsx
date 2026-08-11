@@ -26,8 +26,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
             </div>
             <div className="brand-titles">
               <div className="brand-tag">SIH 2026 • SIH260487</div>
-              <h1 className="brand-name">BioShield</h1>
-              <span className="brand-sub">Closed-Loop Biosecurity Platform</span>
+              <h1 className="brand-name">AgriSentinel</h1>
+              <span className="brand-sub">Digital Farm Biosecurity Platform</span>
             </div>
           </div>
         </div>

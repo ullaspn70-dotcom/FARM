@@ -1,6 +1,6 @@
-# BioShield Backend API
+# AgriSentinel Backend API
 
-FastAPI + PostgreSQL backend for the BioShield SIH260487 frontend.
+FastAPI + PostgreSQL backend for the AgriSentinel SIH260487 frontend.
 
 ## Stack
 

@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     JWT_ACCESS_EXPIRE_MINUTES: int = 60
     JWT_REFRESH_EXPIRE_DAYS: int = 7
 
-    APP_NAME: str = "BioShield API"
+    APP_NAME: str = "AgriSentinel API"
     APP_ENV: str = "development"
     DEBUG: bool = True
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"

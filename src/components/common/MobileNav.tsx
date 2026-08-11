@@ -28,8 +28,8 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       <div className={`mobile-drawer ${isOpen ? "open" : ""}`}>
         <div className="mobile-drawer-header">
           <div>
-            <h3 className="drawer-title">BioShield Navigation</h3>
-            <span className="drawer-sub">SIH260487 Portal</span>
+            <h3 className="drawer-title">AgriSentinel Navigation</h3>
+            <span className="drawer-sub">AgriSentinel Portal • SIH260487</span>
           </div>
           <button className="drawer-close-btn" onClick={onClose} aria-label="Close drawer">
             <X size={20} />
