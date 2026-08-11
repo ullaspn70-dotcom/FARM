@@ -10,6 +10,8 @@ export const VetDashboard: React.FC = () => {
   const [selectedIncident, setSelectedIncident] = useState<IncidentReport | null>(null);
   const [actionNotes, setActionNotes] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   const fetchIncidents = async () => {
     setLoading(true);
@@ -34,6 +36,8 @@ export const VetDashboard: React.FC = () => {
   const handleAction = async (action: "validate" | "request_info" | "reject") => {
     if (!selectedIncident) return;
     setProcessing(true);
+    setActionError(null);
+    setActionSuccess(null);
     try {
       const updated = await incidentService.verifyIncident(
         selectedIncident.id,
@@ -42,9 +46,19 @@ export const VetDashboard: React.FC = () => {
       );
       setSelectedIncident(updated);
       setActionNotes("");
+      setActionSuccess(
+        action === "validate"
+          ? "Incident verified successfully. Corrective actions were generated."
+          : action === "request_info"
+          ? "More information requested from the farmer."
+          : "Incident rejected and marked as non-critical."
+      );
       await fetchIncidents();
     } catch (err) {
       console.error(err);
+      setActionError(
+        "Verification action failed. Switch to Veterinarian role and wait a moment, then try again."
+      );
     } finally {
       setProcessing(false);
     }
@@ -100,6 +114,8 @@ export const VetDashboard: React.FC = () => {
                   onClick={() => {
                     setSelectedIncident(inc);
                     setActionNotes("");
+                    setActionError(null);
+                    setActionSuccess(null);
                   }}
                 >
                   <div className="item-top">
@@ -220,6 +236,18 @@ export const VetDashboard: React.FC = () => {
                 placeholder="Enter diagnostic notes, laboratory sample directives, or reasons..."
                 className="form-textarea"
               />
+
+              {actionSuccess && (
+                <div className="form-success-banner" role="status">
+                  {actionSuccess}
+                </div>
+              )}
+
+              {actionError && (
+                <div className="form-error-banner" role="alert">
+                  {actionError}
+                </div>
+              )}
 
               <div className="action-button-group">
                 <button

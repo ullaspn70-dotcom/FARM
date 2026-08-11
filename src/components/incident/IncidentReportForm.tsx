@@ -27,7 +27,8 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
   );
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("Shed 02 - Isolation Pen B");
-  const [fileName, setFileName] = useState<string | null>("mortality_obs_sample.jpg");
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submittedStatus, setSubmittedStatus] = useState(false);
@@ -41,7 +42,8 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
     setSubmitError(null);
 
     try {
-      await incidentService.submitIncident({
+      await incidentService.submitIncident(
+        {
         farmId: activeFarm.id,
         farmName: activeFarm.name,
         farmType: activeFarm.farmType,
@@ -51,10 +53,12 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
         dateTime,
         description: description || "Observed health anomaly requiring veterinary inspection.",
         location,
-        evidenceFiles: fileName
-          ? [{ name: fileName, url: "#", timestamp: new Date().toISOString() }]
+        evidenceFiles: evidenceFile
+          ? [{ name: evidenceFile.name, url: "#", timestamp: new Date().toISOString() }]
           : [],
-      });
+        },
+        evidenceFile
+      );
 
       setSubmitting(false);
       setSubmittedStatus(true);
@@ -210,6 +214,7 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
                   type="file"
                   onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
+                      setEvidenceFile(e.target.files[0]);
                       setFileName(e.target.files[0].name);
                     }
                   }}
@@ -218,7 +223,13 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
                 {fileName && (
                   <div className="uploaded-preview-tag">
                     <span>Attached: {fileName}</span>
-                    <button type="button" onClick={() => setFileName(null)}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFileName(null);
+                        setEvidenceFile(null);
+                      }}
+                    >
                       <X size={14} />
                     </button>
                   </div>

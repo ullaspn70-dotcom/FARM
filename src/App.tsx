@@ -13,6 +13,7 @@ import { CorrectiveActionsList } from "./components/corrective/CorrectiveActions
 import { OfficerDashboard } from "./components/officer/OfficerDashboard";
 import { GisFarmMap } from "./components/gis/GisFarmMap";
 import { NotificationCenter } from "./components/notifications/NotificationCenter";
+import { AarohiAdvisorModal } from "./components/common/AarohiAdvisorModal";
 import "./App.css";
 
 function AppContent() {
@@ -23,6 +24,7 @@ function AppContent() {
 
   const [isPassportOpen, setIsPassportOpen] = useState(false);
   const [isReportIncidentOpen, setIsReportIncidentOpen] = useState(false);
+  const [isAarohiOpen, setIsAarohiOpen] = useState(false);
 
   const farmerDashboard = (
     <FarmerDashboard
@@ -43,6 +45,7 @@ function AppContent() {
           setActiveTab={setActiveTab}
           onOpenPassport={() => setIsPassportOpen(true)}
           onOpenReportIncident={() => setIsReportIncidentOpen(true)}
+          onOpenAarohi={() => setIsAarohiOpen(true)}
         />
 
         <MobileNav
@@ -89,6 +92,11 @@ function AppContent() {
       <IncidentReportForm
         isOpen={isReportIncidentOpen}
         onClose={() => setIsReportIncidentOpen(false)}
+      />
+
+      <AarohiAdvisorModal
+        isOpen={isAarohiOpen}
+        onClose={() => setIsAarohiOpen(false)}
       />
 
       <NotificationCenter />

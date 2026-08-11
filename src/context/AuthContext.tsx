@@ -1,7 +1,18 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { UserRole, Farm } from "../types";
 import { initialFarm } from "../data/mockData";
-import { farmService } from "../services/api";
+import { farmService, authService } from "../services/api";
+
+const DEMO_CREDENTIALS: Record<UserRole, { email: string; password: string }> = {
+  farmer: { email: "farmer@bioshield.local", password: "farmer123" },
+  veterinarian: { email: "vet@bioshield.local", password: "vet123" },
+  officer: { email: "officer@bioshield.local", password: "officer123" },
+};
+
+async function loginDemoRole(nextRole: UserRole) {
+  const creds = DEMO_CREDENTIALS[nextRole];
+  await authService.login(creds.email, creds.password);
+}
 
 interface AuthContextType {
   role: UserRole;
@@ -14,11 +25,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [role, setRole] = useState<UserRole>("farmer");
+  const [role, setRoleState] = useState<UserRole>("farmer");
   const [activeFarm, setActiveFarm] = useState<Farm>(initialFarm);
   const [allFarms, setAllFarms] = useState<Farm[]>([initialFarm]);
 
   useEffect(() => {
+    loginDemoRole("farmer").catch(() => {
+      // Demo login optional when API is unavailable
+    });
+
     farmService
       .getAllFarms()
       .then((farms) => {
@@ -34,6 +49,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Backend unavailable — keep initial mock farm for offline/demo fallback
       });
   }, []);
+
+  const setRole = (nextRole: UserRole) => {
+    setRoleState(nextRole);
+    loginDemoRole(nextRole).catch((err) => {
+      console.error("Demo login failed:", err);
+    });
+  };
 
   return (
     <AuthContext.Provider

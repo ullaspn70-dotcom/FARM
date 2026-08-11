@@ -18,6 +18,7 @@ interface SidebarProps {
   setActiveTab: (tab: NavTab) => void;
   onOpenPassport: () => void;
   onOpenReportIncident: () => void;
+  onOpenAarohi?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -25,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setActiveTab,
   onOpenPassport,
   onOpenReportIncident,
+  onOpenAarohi,
 }) => {
   const { role } = useAuth();
 
@@ -120,11 +122,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Aarohi Farm Assistant Footer */}
-      <div className="sidebar-assistant">
+      <div
+        className="sidebar-assistant"
+        role="button"
+        tabIndex={0}
+        onClick={onOpenAarohi}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") onOpenAarohi?.();
+        }}
+      >
         <div className="assistant-avatar">A</div>
         <div className="assistant-info">
           <strong>Aarohi AI Assistant</strong>
-          <span>Biosecurity Advisor</span>
+          <span>Biosecurity Advisor — click for tips</span>
         </div>
         <HelpCircle size={16} className="assistant-help-icon" />
       </div>

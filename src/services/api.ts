@@ -19,6 +19,21 @@ function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function apiFetchForm<T>(path: string, formData: FormData, method = "POST"): Promise<T> {
+  const response = await fetch(`${API_V1}${path}`, {
+    method,
+    headers: getAuthHeaders(),
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `API error ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -81,8 +96,22 @@ export const incidentService = {
   },
 
   async submitIncident(
-    newIncident: Omit<IncidentReport, "id" | "status" | "severity">
+    newIncident: Omit<IncidentReport, "id" | "status" | "severity">,
+    evidenceFile?: File | null
   ): Promise<IncidentReport> {
+    if (evidenceFile) {
+      const form = new FormData();
+      form.append("farm_id", newIncident.farmId);
+      form.append("incident_type", newIncident.incidentType);
+      form.append("animal_type", newIncident.animalType);
+      form.append("number_affected", String(newIncident.numberAffected));
+      form.append("date_time", newIncident.dateTime);
+      form.append("description", newIncident.description);
+      form.append("location", newIncident.location);
+      form.append("evidence", evidenceFile);
+      return apiFetchForm<IncidentReport>("/incidents", form);
+    }
+
     return apiFetch<IncidentReport>("/incidents/json", {
       method: "POST",
       body: JSON.stringify({
