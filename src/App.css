@@ -1031,6 +1031,22 @@
   margin-bottom: 0;
 }
 
+.form-error-banner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 .form-grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 .form-label { font-size: 12px; font-weight: 700; color: #334155; }

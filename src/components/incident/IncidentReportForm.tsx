@@ -31,12 +31,14 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
 
   const [submitting, setSubmitting] = useState(false);
   const [submittedStatus, setSubmittedStatus] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setSubmitError(null);
 
     try {
       await incidentService.submitIncident({
@@ -59,6 +61,9 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
       if (onSubmitted) onSubmitted();
     } catch (err) {
       console.error(err);
+      setSubmitError(
+        "Could not submit the report. Check your internet connection, wait ~30s for the API to wake up, then try again."
+      );
       setSubmitting(false);
     }
   };
@@ -221,6 +226,13 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
               </div>
             </div>
             </div>
+
+            {submitError && (
+              <div className="form-error-banner" role="alert">
+                <AlertTriangle size={16} />
+                <span>{submitError}</span>
+              </div>
+            )}
 
             <div className="form-actions-row">
               <button type="button" className="btn-secondary-action" onClick={handleResetAndClose}>

@@ -13,12 +13,18 @@ export const VetDashboard: React.FC = () => {
 
   const fetchIncidents = async () => {
     setLoading(true);
-    const list = await incidentService.getIncidents();
-    setIncidents(list);
-    if (list.length > 0 && !selectedIncident) {
-      setSelectedIncident(list[0]);
+    try {
+      const list = await incidentService.getIncidents();
+      setIncidents(list);
+      if (list.length > 0 && !selectedIncident) {
+        setSelectedIncident(list[0]);
+      }
+    } catch (err) {
+      console.error(err);
+      setIncidents([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
