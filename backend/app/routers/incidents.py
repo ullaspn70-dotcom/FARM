@@ -3,9 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_current_user, get_optional_user, require_roles
+from app.core.dependencies import get_optional_user
 from app.database.session import get_db
-from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.incident import IncidentCreate, IncidentResponse, IncidentVerifyRequest
 from app.services.file_service import save_upload_file
@@ -81,7 +80,7 @@ def verify_incident(
     incident_id: str,
     payload: IncidentVerifyRequest,
     db: Session = Depends(get_db),
-    current_user: Annotated[User | None, Depends(require_roles(UserRole.VETERINARIAN))] = None,
+    current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
     incident = IncidentService.verify_incident(db, incident_id, payload, current_user)
     return incident_to_response(incident)

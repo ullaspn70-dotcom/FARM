@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { X, ShieldAlert, Upload, CheckCircle2, MapPin, AlertTriangle } from "lucide-react";
 
 import { incidentService } from "../../services/api";
@@ -16,6 +16,7 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
   onSubmitted,
 }) => {
   const { activeFarm } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [incidentType, setIncidentType] = useState("Sudden Mortality Increase");
   const [animalType, setAnimalType] = useState(
@@ -207,11 +208,21 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
             {/* Evidence Upload Component */}
             <div className="form-group">
               <label className="form-label">Upload Photo / Document Evidence</label>
-              <div className="file-upload-dropzone">
+              <div
+                className="file-upload-dropzone"
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+                }}
+                role="button"
+                tabIndex={0}
+              >
                 <Upload size={24} className="upload-icon" />
                 <span>Drag & drop evidence photos or click to browse</span>
                 <input
+                  ref={fileInputRef}
                   type="file"
+                  accept="image/*,.pdf"
                   onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
                       setEvidenceFile(e.target.files[0]);

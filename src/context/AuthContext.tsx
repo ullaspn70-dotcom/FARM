@@ -50,11 +50,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
   }, []);
 
-  const setRole = (nextRole: UserRole) => {
+  const setRole = async (nextRole: UserRole) => {
     setRoleState(nextRole);
-    loginDemoRole(nextRole).catch((err) => {
+    try {
+      await loginDemoRole(nextRole);
+    } catch (err) {
       console.error("Demo login failed:", err);
-    });
+    }
   };
 
   return (

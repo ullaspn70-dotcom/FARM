@@ -56,9 +56,12 @@ export const VetDashboard: React.FC = () => {
       await fetchIncidents();
     } catch (err) {
       console.error(err);
-      setActionError(
-        "Verification action failed. Switch to Veterinarian role and wait a moment, then try again."
-      );
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("already closed") || message.includes("409")) {
+        setActionError("This incident is already verified or rejected. Select a Reported incident.");
+      } else {
+        setActionError("Verification action failed. Please wait a moment and try again.");
+      }
     } finally {
       setProcessing(false);
     }
