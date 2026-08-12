@@ -104,22 +104,22 @@ class GisService:
                     )
 
         return {
-            "centerFarmId": farm.id,
-            "radiusKm": radius_km,
-            "nearbyIncidents": nearby_incidents,
-            "nearbyHighRiskFarms": high_risk,
-            "containmentZones": [
+            "center_farm_id": farm.id,
+            "radius_km": radius_km,
+            "nearby_incidents": nearby_incidents,
+            "nearby_high_risk_farms": high_risk,
+            "containment_zones": [
                 {
                     "id": z.id,
-                    "centerLat": z.center_lat,
-                    "centerLng": z.center_lng,
-                    "radiusKm": z.radius_km,
+                    "center_lat": z.center_lat,
+                    "center_lng": z.center_lng,
+                    "radius_km": z.radius_km,
                     "reason": z.reason or z.name,
                     "active": z.active,
                 }
                 for z in containment
             ],
-            "regionalContext": " ".join(context_parts) or "No high-risk farms detected within the configured radius.",
+            "regional_context": " ".join(context_parts) or "No high-risk farms detected within the configured radius.",
         }
 
 
@@ -163,14 +163,14 @@ class OfficerService:
         ).scalar() or 0
 
         return {
-            "totalRegisteredFarms": total,
-            "highRiskFarms": high,
-            "mediumRiskFarms": medium,
-            "lowRiskFarms": low,
-            "openIncidents": open_incidents,
-            "pendingVerifications": pending_verifications,
-            "pendingInspections": pending_inspections,
-            "openCorrectiveActions": open_actions,
+            "total_registered_farms": total,
+            "high_risk_farms": high,
+            "medium_risk_farms": medium,
+            "low_risk_farms": low,
+            "open_incidents": open_incidents,
+            "pending_verifications": pending_verifications,
+            "pending_inspections": pending_inspections,
+            "open_corrective_actions": open_actions,
         }
 
     @staticmethod
