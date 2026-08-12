@@ -10,15 +10,25 @@ export const CorrectiveActionsList: React.FC = () => {
   const { role, activeFarm } = useAuth();
   const [actions, setActions] = useState<CorrectiveAction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [selectedActionForEvidence, setSelectedActionForEvidence] = useState<CorrectiveAction | null>(null);
 
   const fetchActions = async () => {
     setLoading(true);
-    const data = await correctiveActionService.getActions(
-      role === "farmer" ? activeFarm.id : undefined
-    );
-    setActions(data);
-    setLoading(false);
+    setError("");
+    try {
+      const data = await correctiveActionService.getActions(
+        role === "farmer" ? activeFarm.id : undefined
+      );
+      setActions(data);
+    } catch (err) {
+      setActions([]);
+      setError(
+        err instanceof Error ? err.message : "Unable to load corrective actions for this farm."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -42,6 +52,12 @@ export const CorrectiveActionsList: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {error && (
+        <div className="form-error-banner" role="alert">
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Actions Table / Card List */}
       <div className="actions-table-card">

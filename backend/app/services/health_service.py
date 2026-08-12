@@ -45,11 +45,41 @@ class HealthRecordService:
         return record
 
 
+DEFAULT_CHECKLIST_TITLES = [
+    "Entry gate vehicle dip disinfected",
+    "Water chlorination level verified (2.5 ppm)",
+    "Daily mortality & morbidity logged",
+    "Visitor digital check-in records verified",
+    "Shed deep sanitation protocol check",
+]
+
+
+def _preview_checklist_items(farm_id: str) -> list[ChecklistItem]:
+    """In-memory checklist for demo when DB has no rows — never persisted."""
+    return [
+        ChecklistItem(
+            id=f"{farm_id}-preview-{index}",
+            farm_id=farm_id,
+            title=title,
+            completed=index <= 2,
+            priority="important" if index == len(DEFAULT_CHECKLIST_TITLES) else "normal",
+        )
+        for index, title in enumerate(DEFAULT_CHECKLIST_TITLES, start=1)
+    ]
+
+
+def _is_preview_checklist_id(item_id: str) -> bool:
+    return "-preview-" in item_id
+
+
 class ChecklistService:
     @staticmethod
     def list_items(db: Session, farm_id: str, user=None) -> list[ChecklistItem]:
         FarmService.get_farm(db, farm_id, user)
-        return db.query(ChecklistItem).filter(ChecklistItem.farm_id == farm_id).all()
+        items = db.query(ChecklistItem).filter(ChecklistItem.farm_id == farm_id).all()
+        if items:
+            return items
+        return _preview_checklist_items(farm_id)
 
     @staticmethod
     def update_item(db: Session, farm_id: str, item_id: str, completed: bool, user=None) -> ChecklistItem:
@@ -60,6 +90,11 @@ class ChecklistService:
             .first()
         )
         if not item:
+            if _is_preview_checklist_id(item_id):
+                for preview in _preview_checklist_items(farm_id):
+                    if preview.id == item_id:
+                        preview.completed = completed
+                        return preview
             raise NotFoundError("ChecklistItem", item_id)
         item.completed = completed
         db.commit()
