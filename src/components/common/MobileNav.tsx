@@ -1,6 +1,18 @@
 import React from "react";
-import { LayoutDashboard, FileBadge, AlertTriangle, ShieldAlert, CheckSquare, MapPin, X } from "lucide-react";
+import {
+  LayoutDashboard,
+  FileBadge,
+  AlertTriangle,
+  ShieldAlert,
+  CheckSquare,
+  MapPin,
+  Target,
+  X,
+} from "lucide-react";
 import type { NavTab } from "./Sidebar";
+import { useTranslation } from "../../context/LocaleContext";
+import { LanguageSelector } from "./LanguageSelector";
+import { useAuth } from "../../context/AuthContext";
 
 interface MobileNavProps {
   activeTab: NavTab;
@@ -19,22 +31,29 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   onOpenPassport,
   onOpenReportIncident,
 }) => {
+  const { t } = useTranslation();
+  const { role } = useAuth();
+
   return (
     <>
-      {/* Mobile Drawer Backdrop */}
       {isOpen && <div className="mobile-drawer-backdrop" onClick={onClose} />}
 
-      {/* Slide-over Mobile Drawer */}
       <div className={`mobile-drawer ${isOpen ? "open" : ""}`}>
         <div className="mobile-drawer-header">
           <div>
-            <h3 className="drawer-title">AgriSentinel Navigation</h3>
-            <span className="drawer-sub">Digital Farm Biosecurity Portal</span>
+            <h3 className="drawer-title">{t("app.name")}</h3>
+            <span className="drawer-sub">{t("app.tagline")}</span>
           </div>
           <button className="drawer-close-btn" onClick={onClose} aria-label="Close drawer">
             <X size={20} />
           </button>
         </div>
+
+        {role === "farmer" && (
+          <div className="mobile-drawer-language">
+            <LanguageSelector />
+          </div>
+        )}
 
         <div className="mobile-drawer-menu">
           <button
@@ -45,8 +64,21 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             }}
           >
             <LayoutDashboard size={20} />
-            <span>Dashboard Overview</span>
+            <span>{t("nav.dashboard")}</span>
           </button>
+
+          {role === "farmer" && (
+            <button
+              className={`drawer-item ${activeTab === "action-center" ? "active" : ""}`}
+              onClick={() => {
+                setActiveTab("action-center");
+                onClose();
+              }}
+            >
+              <Target size={20} />
+              <span>{t("nav.actionCenter")}</span>
+            </button>
+          )}
 
           <button
             className={`drawer-item ${activeTab === "passport" ? "active" : ""}`}
@@ -57,7 +89,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             }}
           >
             <FileBadge size={20} />
-            <span>Biosecurity Passport</span>
+            <span>{t("nav.passport")}</span>
           </button>
 
           <button
@@ -68,7 +100,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             }}
           >
             <AlertTriangle size={20} />
-            <span>Risk Analytics</span>
+            <span>{t("nav.risk")}</span>
           </button>
 
           <button
@@ -79,7 +111,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             }}
           >
             <ShieldAlert size={20} />
-            <span>Incident Management</span>
+            <span>{t("nav.incident")}</span>
           </button>
 
           <button
@@ -90,7 +122,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             }}
           >
             <CheckSquare size={20} />
-            <span>Corrective Actions</span>
+            <span>{t("nav.actions")}</span>
           </button>
 
           <button
@@ -101,7 +133,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             }}
           >
             <MapPin size={20} />
-            <span>GIS Farm Map</span>
+            <span>{t("nav.gis")}</span>
           </button>
         </div>
 
@@ -113,20 +145,29 @@ export const MobileNav: React.FC<MobileNavProps> = ({
               onClose();
             }}
           >
-            + Report Incident
+            + {t("dashboard.reportIncident")}
           </button>
         </div>
       </div>
 
-      {/* Bottom Sticky Navigation Bar for Phones */}
       <div className="mobile-bottom-bar">
         <button
           className={`bottom-bar-item ${activeTab === "overview" ? "active" : ""}`}
           onClick={() => setActiveTab("overview")}
         >
           <LayoutDashboard size={20} />
-          <span>Home</span>
+          <span>{t("nav.home")}</span>
         </button>
+
+        {role === "farmer" && (
+          <button
+            className={`bottom-bar-item ${activeTab === "action-center" ? "active" : ""}`}
+            onClick={() => setActiveTab("action-center")}
+          >
+            <Target size={20} />
+            <span>{t("nav.actionCenter")}</span>
+          </button>
+        )}
 
         <button
           className={`bottom-bar-item ${activeTab === "passport" ? "active" : ""}`}
@@ -136,15 +177,12 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           }}
         >
           <FileBadge size={20} />
-          <span>Passport</span>
+          <span>{t("nav.passport")}</span>
         </button>
 
-        <button
-          className="bottom-bar-item highlight-btn"
-          onClick={onOpenReportIncident}
-        >
+        <button className="bottom-bar-item highlight-btn" onClick={onOpenReportIncident}>
           <ShieldAlert size={22} />
-          <span>Report</span>
+          <span>{t("nav.report")}</span>
         </button>
 
         <button
@@ -152,15 +190,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           onClick={() => setActiveTab("actions")}
         >
           <CheckSquare size={20} />
-          <span>Actions</span>
-        </button>
-
-        <button
-          className={`bottom-bar-item ${activeTab === "gis" ? "active" : ""}`}
-          onClick={() => setActiveTab("gis")}
-        >
-          <MapPin size={20} />
-          <span>GIS Map</span>
+          <span>{t("nav.actions")}</span>
         </button>
       </div>
     </>

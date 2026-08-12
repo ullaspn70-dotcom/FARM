@@ -2,6 +2,8 @@ import React from "react";
 import { ShieldCheck, Bell, UserCheck, Stethoscope, Landmark, Menu } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
+import { useTranslation } from "../../context/LocaleContext";
+import { LanguageSelector } from "./LanguageSelector";
 
 interface NavbarProps {
   onToggleMobileNav?: () => void;
@@ -10,6 +12,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
   const { role, setRole, activeFarm, setActiveFarm, allFarms } = useAuth();
   const { unreadCount, setIsDrawerOpen } = useNotifications();
+  const { t } = useTranslation();
 
   return (
     <header className="bioshield-navbar">
@@ -25,8 +28,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
               <ShieldCheck size={26} color="#FFFFFF" />
             </div>
             <div className="brand-titles">
-              <h1 className="brand-name">AgriSentinel</h1>
-              <span className="brand-sub">Digital Farm Biosecurity Platform</span>
+              <h1 className="brand-name">{t("app.name")}</h1>
+              <span className="brand-sub">{t("app.tagline")}</span>
             </div>
           </div>
         </div>
@@ -39,21 +42,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
               onClick={() => setRole("farmer")}
             >
               <UserCheck size={16} />
-              <span>Farmer</span>
+              <span>{t("role.farmer")}</span>
             </button>
             <button
               className={`role-btn ${role === "veterinarian" ? "active" : ""}`}
               onClick={() => setRole("veterinarian")}
             >
               <Stethoscope size={16} />
-              <span>Veterinarian</span>
+              <span>{t("role.veterinarian")}</span>
             </button>
             <button
               className={`role-btn ${role === "officer" ? "active" : ""}`}
               onClick={() => setRole("officer")}
             >
               <Landmark size={16} />
-              <span>Govt Officer</span>
+              <span>{t("role.officer")}</span>
             </button>
           </div>
         </div>
@@ -62,8 +65,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
         <div className="navbar-right">
           <div className="live-badge">
             <span className="live-ping"></span>
-            <span>Live Monitor</span>
+            <span>{t("role.liveMonitor")}</span>
           </div>
+
+          {role === "farmer" && <LanguageSelector compact />}
 
           <div className="farm-selector-wrapper">
             <select

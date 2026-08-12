@@ -9,6 +9,8 @@ import type {
   NotificationItem,
   UserRole,
   ChecklistItem,
+  RiskSummary,
+  SpatialRiskResponse,
 } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -192,17 +194,42 @@ export const riskService = {
       `/risk/farms/${farmId}/history?days=${days}`
     );
   },
+
+  async getRiskSummary(farmId: string): Promise<RiskSummary> {
+    return apiFetch<RiskSummary>(`/risk/farms/${farmId}/summary`);
+  },
 };
 
 export const gisService = {
-  async getGisMapNodes(): Promise<GisMapNode[]> {
-    return apiFetch<GisMapNode[]>("/gis/nodes");
+  async getGisMapNodes(farmType?: string, riskLevel?: string): Promise<GisMapNode[]> {
+    const params = new URLSearchParams();
+    if (farmType && farmType !== "all") params.set("farmType", farmType);
+    if (riskLevel && riskLevel !== "all") params.set("riskLevel", riskLevel);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    return apiFetch<GisMapNode[]>(`/gis/nodes${query}`);
+  },
+
+  async getSpatialRisk(farmId: string, radiusKm = 15): Promise<SpatialRiskResponse> {
+    return apiFetch<SpatialRiskResponse>(
+      `/gis/spatial-risk?farmId=${encodeURIComponent(farmId)}&radiusKm=${radiusKm}`
+    );
   },
 };
 
 export const officerService = {
   async getOfficerStats(): Promise<OfficerStats> {
     return apiFetch<OfficerStats>("/officer/stats");
+  },
+
+  async getInspectionPriority(): Promise<Farm[]> {
+    return apiFetch<Farm[]>("/officer/inspection-priority");
+  },
+
+  async scheduleInspection(farmId: string, notes?: string): Promise<{ id: string }> {
+    return apiFetch<{ id: string }>("/officer/inspections", {
+      method: "POST",
+      body: JSON.stringify({ farmId, notes }),
+    });
   },
 };
 

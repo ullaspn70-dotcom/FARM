@@ -11,6 +11,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useLocale, useTranslation } from "../../context/LocaleContext";
 import { StatusBadge } from "../common/StatusBadge";
 import { farmService, incidentService, riskService } from "../../services/api";
 import type { ChecklistItem, IncidentReport, RiskFactor } from "../../types";
@@ -20,6 +21,7 @@ interface FarmerDashboardProps {
   onOpenReportIncident: () => void;
   onNavigateToActions: () => void;
   onNavigateToRisk: () => void;
+  onNavigateToActionCenter?: () => void;
 }
 
 export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
@@ -29,11 +31,16 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
   onNavigateToRisk,
 }) => {
   const { activeFarm } = useAuth();
+  const { t } = useTranslation();
+  const { suggestFromFarmLocation } = useLocale();
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [riskFactors, setRiskFactors] = useState<RiskFactor[]>([]);
-
   const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    suggestFromFarmLocation(activeFarm.location);
+  }, [activeFarm.location, suggestFromFarmLocation]);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,14 +63,14 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
           setChecklist([]);
           setIncidents([]);
           setRiskFactors([]);
-          setLoadError("Unable to load farm data. Please refresh the page.");
+          setLoadError(t("dashboard.loadError"));
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [activeFarm.id]);
+  }, [activeFarm.id, t]);
 
   const completedCount = checklist.filter((c) => c.completed).length;
   const scoreDelta = activeFarm.biosecurityScore - activeFarm.previousScore;
@@ -97,21 +104,26 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
     }
   };
 
+  const riskKey = activeFarm.riskLevel === "safe" ? "safe" : activeFarm.riskLevel === "caution" ? "caution" : "critical";
+
   const advisorTitle =
     topRiskFactor?.label ??
     (activeFarm.riskLevel === "critical"
-      ? "Urgent Biosecurity Action Required"
+      ? t("dashboard.advisor.urgent")
       : activeFarm.riskLevel === "caution"
-      ? "Review Pending Protocol Items"
-      : "Farm Status Update");
+      ? t("dashboard.advisor.review")
+      : t("dashboard.advisor.update"));
 
   const advisorMessage =
     topRiskFactor?.description ??
     (activeFarm.riskLevel === "safe"
-      ? "No active bio-pathogen anomalies detected. Continue routine sanitation and checklist verification."
+      ? t("dashboard.advisor.safe")
       : activeFarm.riskLevel === "caution"
-      ? "One or more risk factors need attention. Review corrective actions to protect your biosecurity score."
-      : "Active risk factors detected. Follow quarantine and disinfection protocols immediately.");
+      ? t("dashboard.advisor.caution")
+      : t("dashboard.advisor.critical"));
+
+  const animalLabel =
+    activeFarm.farmType === "poultry" ? t("common.birds") : t("common.pigs");
 
   return (
     <div className="farmer-dashboard-view">
@@ -119,16 +131,16 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
         <div className="header-meta">
           <div className="farm-type-pills">
             <StatusBadge type="farmType" value={activeFarm.farmType} />
-            <span className="farm-id-code">ID: {activeFarm.id}</span>
+            <span className="farm-id-code">{t("common.farmId")}: {activeFarm.id}</span>
             <span className="location-tag">📍 {activeFarm.location}</span>
           </div>
 
           <h2 className="farm-title-name">{activeFarm.name}</h2>
           <p className="farm-subtitle">
-            Registered Owner: <strong>{activeFarm.owner}</strong> • Total Population:{" "}
+            {t("dashboard.registeredOwner")}: <strong>{activeFarm.owner}</strong> •{" "}
+            {t("dashboard.totalPopulation")}:{" "}
             <strong>
-              {activeFarm.animalCount.toLocaleString()}{" "}
-              {activeFarm.farmType === "poultry" ? "birds" : "pigs"}
+              {activeFarm.animalCount.toLocaleString()} {animalLabel}
             </strong>
           </p>
         </div>
@@ -136,12 +148,12 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
         <div className="header-action-buttons">
           <button className="btn-primary-report" onClick={onOpenReportIncident}>
             <ShieldAlert size={18} />
-            <span>Report Incident</span>
+            <span>{t("dashboard.reportIncident")}</span>
           </button>
 
           <button className="btn-secondary-passport" onClick={onOpenPassport}>
             <FileBadge size={18} />
-            <span>View Passport</span>
+            <span>{t("dashboard.viewPassport")}</span>
           </button>
         </div>
       </div>
@@ -159,21 +171,9 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
           </div>
 
           <div className="banner-text">
-            <span className="banner-eyebrow">CONTINUOUS BIOSECURITY STATUS</span>
-            <h3 className="banner-heading">
-              {activeFarm.riskLevel === "safe"
-                ? "Low Bio-Risk Level — Optimal Safeguards"
-                : activeFarm.riskLevel === "caution"
-                ? "Medium Risk — Attention Required"
-                : "High Bio-Risk — Urgent Action Recommended"}
-            </h3>
-            <p className="banner-subtext">
-              {activeFarm.riskLevel === "safe"
-                ? "No active bio-pathogen anomalies detected across farm zones. Continue routine sanitation."
-                : activeFarm.riskLevel === "caution"
-                ? "Disinfection protocol or visitor record delay detected. Resolve pending items to protect score."
-                : "Active incident nearby or sanitation breach observed. Quarantine guidelines triggered."}
-            </p>
+            <span className="banner-eyebrow">{t("dashboard.biosecurityStatus")}</span>
+            <h3 className="banner-heading">{t(`dashboard.risk.${riskKey}.title`)}</h3>
+            <p className="banner-subtext">{t(`dashboard.risk.${riskKey}.desc`)}</p>
           </div>
         </div>
 
@@ -185,12 +185,12 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
               {scoreDelta >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
               <span>
                 {scoreDelta >= 0 ? "+" : ""}
-                {scoreDelta} points (recent trend)
+                {scoreDelta} {t("dashboard.scoreTrend")}
               </span>
             </div>
           </div>
           <button className="btn-why-risk" onClick={onNavigateToRisk}>
-            Why did score change? →
+            {t("dashboard.whyScoreChanged")} →
           </button>
         </div>
       </section>
@@ -208,9 +208,9 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
             <Activity size={20} color="#154D38" />
           </div>
           <div className="metric-details">
-            <span className="metric-label">Compliance Rate</span>
+            <span className="metric-label">{t("dashboard.complianceRate")}</span>
             <strong className="metric-value">{activeFarm.complianceRate}%</strong>
-            <span className="metric-sub text-green">Target: &gt;85%</span>
+            <span className="metric-sub text-green">{t("common.target")}: &gt;85%</span>
           </div>
         </div>
 
@@ -219,16 +219,18 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
             <ClipboardList size={20} color="#D97706" />
           </div>
           <div className="metric-details">
-            <span className="metric-label">Checklist Routine</span>
+            <span className="metric-label">{t("dashboard.checklistRoutine")}</span>
             <strong className="metric-value">
               {completedCount} / {checklist.length || "—"}
             </strong>
             <span className="metric-sub">
               {checklist.length === 0
-                ? "Loading..."
+                ? t("common.loading")
                 : completedCount === checklist.length
-                ? "100% Completed"
-                : `${checklist.length - completedCount} Item(s) Pending`}
+                ? t("dashboard.checklistCompleted")
+                : t("dashboard.checklistPending", {
+                    count: checklist.length - completedCount,
+                  })}
             </span>
           </div>
         </div>
@@ -238,9 +240,9 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
             <CheckCircle2 size={20} color="#2563EB" />
           </div>
           <div className="metric-details">
-            <span className="metric-label">Vaccination Rate</span>
+            <span className="metric-label">{t("dashboard.vaccinationRate")}</span>
             <strong className="metric-value">{activeFarm.vaccinationCoverage}%</strong>
-            <span className="metric-sub">Fully Documented</span>
+            <span className="metric-sub">{t("dashboard.vaccinationDocumented")}</span>
           </div>
         </div>
 
@@ -249,10 +251,10 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
             <AlertCircle size={20} color="#DC2626" />
           </div>
           <div className="metric-details">
-            <span className="metric-label">Pending Actions</span>
+            <span className="metric-label">{t("dashboard.pendingActions")}</span>
             <strong className="metric-value">{activeFarm.activeAlerts}</strong>
             <button className="btn-text-link" onClick={onNavigateToActions}>
-              View Actions →
+              {t("dashboard.viewActions")} →
             </button>
           </div>
         </div>
@@ -262,17 +264,20 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
         <div className="card-panel">
           <div className="panel-header-row">
             <div>
-              <span className="panel-eyebrow">DAILY BIO-SECURITY PROTOCOL</span>
-              <h3 className="panel-title">Routine Verification Checklist</h3>
+              <span className="panel-eyebrow">{t("dashboard.checklistEyebrow")}</span>
+              <h3 className="panel-title">{t("dashboard.checklistTitle")}</h3>
             </div>
             <span className="progress-badge">
-              {completedCount}/{checklist.length || 0} Completed
+              {t("dashboard.checklistCompletedBadge", {
+                done: completedCount,
+                total: checklist.length || 0,
+              })}
             </span>
           </div>
 
           <div className="checklist-items-list">
             {checklist.length === 0 ? (
-              <p className="timeline-desc">No checklist items loaded for this farm.</p>
+              <p className="timeline-desc">{t("dashboard.checklistEmpty")}</p>
             ) : (
               checklist.map((item) => (
                 <div
@@ -284,7 +289,9 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                     {item.completed && <CheckCircle2 size={16} />}
                   </div>
                   <span className="item-label">{item.title}</span>
-                  {!item.completed && <span className="action-tag-urgent">Action Due</span>}
+                  {!item.completed && (
+                    <span className="action-tag-urgent">{t("dashboard.actionDue")}</span>
+                  )}
                 </div>
               ))
             )}
@@ -294,15 +301,15 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
         <div className="card-panel">
           <div className="panel-header-row">
             <div>
-              <span className="panel-eyebrow">REAL-TIME MONITORING</span>
-              <h3 className="panel-title">Recent Farm Log Events</h3>
+              <span className="panel-eyebrow">{t("dashboard.eventsEyebrow")}</span>
+              <h3 className="panel-title">{t("dashboard.eventsTitle")}</h3>
             </div>
-            <span className="live-pill">LIVE</span>
+            <span className="live-pill">{t("common.live")}</span>
           </div>
 
           <div className="events-timeline">
             {incidents.length === 0 ? (
-              <p className="timeline-desc">No incidents recorded for this farm yet.</p>
+              <p className="timeline-desc">{t("dashboard.eventsEmpty")}</p>
             ) : (
               incidents.slice(0, 4).map((incident) => (
                 <div key={incident.id} className="timeline-item">
@@ -324,7 +331,9 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                       </span>
                     </div>
                     <p className="timeline-desc">{incident.description}</p>
-                    <span className="zone-tag">Location: {incident.location}</span>
+                    <span className="zone-tag">
+                      {t("dashboard.location")}: {incident.location}
+                    </span>
                   </div>
                 </div>
               ))
@@ -336,12 +345,12 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
       <div className="aarohi-tip-banner">
         <div className="aarohi-avatar-large">A</div>
         <div className="aarohi-content">
-          <span className="aarohi-eyebrow">AAROHI BIOSECURITY ADVISOR TIP</span>
+          <span className="aarohi-eyebrow">{t("dashboard.advisorEyebrow")}</span>
           <h4 className="aarohi-title">{advisorTitle}</h4>
           <p className="aarohi-message">{advisorMessage}</p>
           <div className="aarohi-actions">
             <button className="btn-aarohi-action" onClick={onNavigateToActions}>
-              Open Corrective Actions List <ArrowRight size={16} />
+              {t("dashboard.advisorOpenActions")} <ArrowRight size={16} />
             </button>
           </div>
         </div>

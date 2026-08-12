@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { LocaleProvider } from "./context/LocaleContext";
 import { Navbar } from "./components/common/Navbar";
 import { Sidebar, type NavTab } from "./components/common/Sidebar";
 import { MobileNav } from "./components/common/MobileNav";
 import { FarmerDashboard } from "./components/farmer/FarmerDashboard";
 import { BiosecurityPassportModal } from "./components/farmer/BiosecurityPassportModal";
+import { BiosecurityActionCenter } from "./components/farmer/BiosecurityActionCenter";
 import { RiskDashboard } from "./components/risk/RiskDashboard";
 import { IncidentReportForm } from "./components/incident/IncidentReportForm";
 import { VetDashboard } from "./components/vet/VetDashboard";
@@ -32,6 +34,7 @@ function AppContent() {
       onOpenReportIncident={() => setIsReportIncidentOpen(true)}
       onNavigateToActions={() => setActiveTab("actions")}
       onNavigateToRisk={() => setActiveTab("risk")}
+      onNavigateToActionCenter={() => setActiveTab("action-center")}
     />
   );
 
@@ -67,6 +70,18 @@ function AppContent() {
 
           {activeTab === "passport" && farmerDashboard}
 
+          {activeTab === "action-center" && (
+            role === "farmer" ? (
+              <BiosecurityActionCenter
+                onNavigateToActions={() => setActiveTab("actions")}
+              />
+            ) : role === "officer" ? (
+              <OfficerDashboard onNavigateToGis={() => setActiveTab("gis")} />
+            ) : (
+              <VetDashboard />
+            )
+          )}
+
           {activeTab === "risk" && <RiskDashboard />}
 
           {activeTab === "incident" &&
@@ -75,7 +90,10 @@ function AppContent() {
           {activeTab === "actions" && <CorrectiveActionsList />}
 
           {activeTab === "gis" && (
-            <GisFarmMap onOpenPassport={() => setIsPassportOpen(true)} />
+            <GisFarmMap
+              onOpenPassport={() => setIsPassportOpen(true)}
+              onNavigateToRisk={() => setActiveTab("risk")}
+            />
           )}
 
           {activeTab === "officer" && (
@@ -106,10 +124,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <AppContent />
-      </NotificationProvider>
-    </AuthProvider>
+    <LocaleProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <AppContent />
+        </NotificationProvider>
+      </AuthProvider>
+    </LocaleProvider>
   );
 }

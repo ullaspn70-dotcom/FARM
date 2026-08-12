@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { Upload, Calendar, CheckCircle2 } from "lucide-react";
+import { Upload, Calendar, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import type { CorrectiveAction } from "../../types";
 import { correctiveActionService } from "../../services/api";
 import { StatusBadge } from "../common/StatusBadge";
 import { EvidenceUploadModal } from "./EvidenceUploadModal";
+import { CorrectiveActionTraceability } from "./CorrectiveActionTraceability";
 import { useAuth } from "../../context/AuthContext";
+import { useTranslation } from "../../context/LocaleContext";
 
 export const CorrectiveActionsList: React.FC = () => {
   const { role, activeFarm } = useAuth();
+  const { t } = useTranslation();
   const [actions, setActions] = useState<CorrectiveAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedActionForEvidence, setSelectedActionForEvidence] = useState<CorrectiveAction | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchActions = async () => {
     setLoading(true);
@@ -24,7 +28,7 @@ export const CorrectiveActionsList: React.FC = () => {
     } catch (err) {
       setActions([]);
       setError(
-        err instanceof Error ? err.message : "Unable to load corrective actions for this farm."
+        err instanceof Error ? err.message : t("actions.error")
       );
     } finally {
       setLoading(false);
@@ -45,11 +49,9 @@ export const CorrectiveActionsList: React.FC = () => {
       {/* Header */}
       <div className="actions-header-card">
         <div>
-          <span className="eyebrow-text">BIOSECURITY PROTOCOL MANAGEMENT</span>
-          <h2 className="view-title">Corrective Actions & Compliance</h2>
-          <p className="view-subtitle">
-            Track, assign, and verify corrective biosecurity tasks required to maintain farm certification.
-          </p>
+          <span className="eyebrow-text">{t("actions.eyebrow")}</span>
+          <h2 className="view-title">{t("actions.title")}</h2>
+          <p className="view-subtitle">{t("actions.subtitle")}</p>
         </div>
       </div>
 
@@ -62,30 +64,39 @@ export const CorrectiveActionsList: React.FC = () => {
       {/* Actions Table / Card List */}
       <div className="actions-table-card">
         {loading ? (
-          <div className="loading-state">Loading corrective action tasks...</div>
+          <div className="loading-state">{t("actions.loading")}</div>
         ) : actions.length === 0 ? (
-          <div className="empty-state">No active corrective actions recorded.</div>
+          <div className="empty-state">{t("actions.empty")}</div>
         ) : (
           <div className="table-responsive-wrapper">
             <table className="bioshield-table">
               <thead>
                 <tr>
-                  <th>Action Title & Description</th>
-                  <th>Priority</th>
-                  <th>Assigned Person</th>
-                  <th>Deadline</th>
-                  <th>Status</th>
-                  <th>Evidence Status</th>
-                  <th>Actions</th>
+                  <th>{t("actions.colTitle")}</th>
+                  <th>{t("actions.colPriority")}</th>
+                  <th>{t("actions.colAssigned")}</th>
+                  <th>{t("actions.colDeadline")}</th>
+                  <th>{t("actions.colStatus")}</th>
+                  <th>{t("actions.colEvidence")}</th>
+                  <th>{t("actions.colActions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {actions.map((act) => (
-                  <tr key={act.id}>
+                  <React.Fragment key={act.id}>
+                  <tr>
                     <td className="cell-main-info">
                       <strong className="action-item-title">{act.title}</strong>
                       <p className="action-item-desc">{act.description}</p>
-                      <span className="farm-tag-sub">Farm: {act.farmName}</span>
+                      <span className="farm-tag-sub">{t("actions.farmTag")}: {act.farmName}</span>
+                      <button
+                        type="button"
+                        className="btn-trace-toggle"
+                        onClick={() => setExpandedId(expandedId === act.id ? null : act.id)}
+                      >
+                        {expandedId === act.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        {t("actions.traceability")}
+                      </button>
                     </td>
                     <td>
                       <span className={`priority-badge priority-${act.priority}`}>
@@ -106,7 +117,7 @@ export const CorrectiveActionsList: React.FC = () => {
                           <span>Submitted ({act.verificationStatus})</span>
                         </div>
                       ) : (
-                        <span className="text-muted">Evidence Required</span>
+                        <span className="text-muted">{t("actions.evidenceRequired")}</span>
                       )}
                     </td>
                     <td className="cell-buttons">
@@ -116,7 +127,7 @@ export const CorrectiveActionsList: React.FC = () => {
                           onClick={() => setSelectedActionForEvidence(act)}
                         >
                           <Upload size={14} />
-                          <span>Upload Evidence</span>
+                          <span>{t("actions.uploadEvidence")}</span>
                         </button>
                       )}
 
@@ -127,18 +138,26 @@ export const CorrectiveActionsList: React.FC = () => {
                               className="btn-verify-approve"
                               onClick={() => handleVerify(act.id, true)}
                             >
-                              Verify
+                              {t("actions.verify")}
                             </button>
                             <button
                               className="btn-verify-reject"
                               onClick={() => handleVerify(act.id, false)}
                             >
-                              Reject
+                              {t("actions.reject")}
                             </button>
                           </div>
                         )}
                     </td>
                   </tr>
+                  {expandedId === act.id && (
+                    <tr className="traceability-row">
+                      <td colSpan={7}>
+                        <CorrectiveActionTraceability action={act} />
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

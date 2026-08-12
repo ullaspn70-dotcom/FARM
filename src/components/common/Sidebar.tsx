@@ -8,10 +8,20 @@ import {
   MapPin,
   ShieldAlert,
   HelpCircle,
+  Target,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useTranslation } from "../../context/LocaleContext";
 
-export type NavTab = "overview" | "passport" | "risk" | "incident" | "actions" | "gis" | "officer";
+export type NavTab =
+  | "overview"
+  | "passport"
+  | "risk"
+  | "incident"
+  | "actions"
+  | "gis"
+  | "officer"
+  | "action-center";
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -29,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenAarohi,
 }) => {
   const { role } = useAuth();
+  const { t } = useTranslation();
 
   return (
     <aside className="bioshield-sidebar">
@@ -36,10 +47,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <span className="role-label">ACTIVE PORTAL</span>
         <strong className="role-name">
           {role === "farmer"
-            ? "Farmer Operations"
+            ? t("app.portal.farmer")
             : role === "veterinarian"
-            ? "Veterinary Verification"
-            : "Government Field Command"}
+            ? t("app.portal.vet")
+            : t("app.portal.officer")}
         </strong>
       </div>
 
@@ -49,8 +60,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => setActiveTab("overview")}
         >
           <LayoutDashboard size={18} />
-          <span>Dashboard Overview</span>
+          <span>{t("nav.dashboard")}</span>
         </button>
+
+        {role === "farmer" && (
+          <button
+            className={`sidebar-link ${activeTab === "action-center" ? "active" : ""}`}
+            onClick={() => setActiveTab("action-center")}
+          >
+            <Target size={18} />
+            <span>{t("nav.actionCenter")}</span>
+          </button>
+        )}
 
         <button
           className={`sidebar-link ${activeTab === "passport" ? "active" : ""}`}
@@ -60,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }}
         >
           <FileBadge size={18} />
-          <span>Biosecurity Passport</span>
+          <span>{t("nav.passport")}</span>
         </button>
 
         <button
@@ -68,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => setActiveTab("risk")}
         >
           <AlertTriangle size={18} />
-          <span>Risk Analytics</span>
+          <span>{t("nav.risk")}</span>
         </button>
 
         <button
@@ -77,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <ShieldAlert size={18} />
           <span>
-            {role === "veterinarian" ? "Incident Queue" : "Report & Track Incident"}
+            {role === "veterinarian" ? t("nav.incident.vet") : t("nav.incident")}
           </span>
         </button>
 
@@ -86,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => setActiveTab("actions")}
         >
           <CheckSquare size={18} />
-          <span>Corrective Actions</span>
+          <span>{t("nav.actions")}</span>
         </button>
 
         <button
@@ -94,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => setActiveTab("gis")}
         >
           <MapPin size={18} />
-          <span>GIS Farm Map</span>
+          <span>{t("nav.gis")}</span>
         </button>
 
         {(role === "officer" || role === "veterinarian") && (
@@ -103,25 +124,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => setActiveTab("officer")}
           >
             <FileSpreadsheet size={18} />
-            <span>Inspection Priorities</span>
+            <span>{t("nav.officer")}</span>
           </button>
         )}
       </nav>
 
-      {/* Quick Action Box for Farmer */}
       {role === "farmer" && (
         <div className="sidebar-quick-actions">
           <p className="quick-action-title">Quick Actions</p>
           <button className="btn-primary-action" onClick={onOpenReportIncident}>
-            + Report Incident
+            + {t("dashboard.reportIncident")}
           </button>
           <button className="btn-secondary-action" onClick={onOpenPassport}>
-            View Passport Profile
+            {t("dashboard.viewPassport")}
           </button>
         </div>
       )}
 
-      {/* Aarohi Farm Assistant Footer */}
       <div
         className="sidebar-assistant"
         role="button"

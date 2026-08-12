@@ -121,6 +121,9 @@ export interface CorrectiveAction {
   status: CorrectiveActionStatus;
   evidenceRequired: boolean;
   verificationStatus: "Unverified" | "Verification Pending" | "Verified";
+  incidentId?: string;
+  sourceType?: "incident" | "assessment" | "inspection" | "compliance";
+  sourceLabel?: string;
   submittedEvidence?: {
     fileUrl: string;
     fileName: string;
@@ -128,6 +131,47 @@ export interface CorrectiveAction {
     location: string;
     notes: string;
   };
+}
+
+export interface RiskSummary {
+  farmId: string;
+  biosecurityScore: number;
+  previousScore: number;
+  riskLevel: RiskLevel;
+  scoreDelta7d: number;
+  riskTrend: "improving" | "stable" | "deteriorating";
+}
+
+export interface SpatialRiskFarm {
+  id: string;
+  name: string;
+  farmType: FarmType;
+  riskLevel: RiskLevel;
+  score: number;
+  distanceKm: number;
+}
+
+export interface ContainmentZone {
+  id: string;
+  centerLat: number;
+  centerLng: number;
+  radiusKm: number;
+  reason: string;
+  active: boolean;
+}
+
+export interface SpatialRiskResponse {
+  centerFarmId: string;
+  radiusKm: number;
+  nearbyIncidents: number;
+  nearbyHighRiskFarms: SpatialRiskFarm[];
+  containmentZones: ContainmentZone[];
+  regionalContext: string;
+}
+
+export interface InspectionPriorityFarm extends Farm {
+  priorityRank: number;
+  priorityReasons: string[];
 }
 
 export interface RiskFactor {
