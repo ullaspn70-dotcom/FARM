@@ -1,8 +1,23 @@
 import React, { useRef, useState } from "react";
 import { X, ShieldAlert, Upload, CheckCircle2, MapPin, AlertTriangle } from "lucide-react";
-
 import { incidentService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import { useTranslation } from "../../context/LocaleContext";
+
+const INCIDENT_TYPES = [
+  { value: "Sudden Mortality Increase", key: "incident.type.mortality" },
+  { value: "Respiratory Distress Symptoms", key: "incident.type.respiratory" },
+  { value: "Feed or Water Contamination", key: "incident.type.feedWater" },
+  { value: "Perimeter Fencing / Bio-Barrier Breach", key: "incident.type.perimeter" },
+  { value: "Unverified Visitor Entry", key: "incident.type.visitor" },
+] as const;
+
+const ANIMAL_TYPES = [
+  { value: "Poultry (Broilers)", key: "incident.animal.poultryBroilers" },
+  { value: "Poultry (Layers)", key: "incident.animal.poultryLayers" },
+  { value: "Swine / Pigs (Growers)", key: "incident.animal.swineGrowers" },
+  { value: "Swine / Pigs (Breeding Stock)", key: "incident.animal.swineBreeding" },
+] as const;
 
 interface IncidentReportFormProps {
   isOpen: boolean;
@@ -16,26 +31,30 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
   onSubmitted,
 }) => {
   const { activeFarm } = useAuth();
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [incidentType, setIncidentType] = useState("Sudden Mortality Increase");
-  const [animalType, setAnimalType] = useState(
-    activeFarm.farmType === "poultry" ? "Poultry (Broilers)" : "Swine / Pigs"
-  );
+  const defaultAnimal =
+    activeFarm.farmType === "poultry" ? "Poultry (Broilers)" : "Swine / Pigs (Growers)";
+
+  const [incidentType, setIncidentType] = useState<string>(INCIDENT_TYPES[0].value);
+  const [animalType, setAnimalType] = useState<string>(defaultAnimal);
   const [numberAffected, setNumberAffected] = useState<number>(12);
-  const [dateTime, setDateTime] = useState<string>(
-    new Date().toISOString().slice(0, 16)
-  );
+  const [dateTime, setDateTime] = useState<string>(new Date().toISOString().slice(0, 16));
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("Shed 02 - Isolation Pen B");
   const [fileName, setFileName] = useState<string | null>(null);
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
-
   const [submitting, setSubmitting] = useState(false);
   const [submittedStatus, setSubmittedStatus] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const displayIncidentType =
+    INCIDENT_TYPES.find((x) => x.value === incidentType)?.key
+      ? t(INCIDENT_TYPES.find((x) => x.value === incidentType)!.key)
+      : incidentType;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,223 +64,141 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
     try {
       await incidentService.submitIncident(
         {
-        farmId: activeFarm.id,
-        farmName: activeFarm.name,
-        farmType: activeFarm.farmType,
-        incidentType,
-        animalType,
-        numberAffected,
-        dateTime,
-        description: description || "Observed health anomaly requiring veterinary inspection.",
-        location,
-        evidenceFiles: evidenceFile
-          ? [{ name: evidenceFile.name, url: "#", timestamp: new Date().toISOString() }]
-          : [],
+          farmId: activeFarm.id,
+          farmName: activeFarm.name,
+          farmType: activeFarm.farmType,
+          incidentType,
+          animalType,
+          numberAffected,
+          dateTime,
+          description: description || t("incident.defaultDescription"),
+          location,
+          evidenceFiles: evidenceFile
+            ? [{ name: evidenceFile.name, url: "#", timestamp: new Date().toISOString() }]
+            : [],
         },
         evidenceFile
       );
-
       setSubmitting(false);
       setSubmittedStatus(true);
-      if (onSubmitted) onSubmitted();
+      onSubmitted?.();
     } catch (err) {
       console.error(err);
-      setSubmitError(
-        "Could not submit the report. Check your internet connection, wait ~30s for the API to wake up, then try again."
-      );
+      setSubmitError(t("incident.errorSubmit"));
       setSubmitting(false);
     }
   };
 
-  const handleResetAndClose = () => {
-    setSubmittedStatus(false);
-    onClose();
-  };
-
   return (
-    <div className="modal-backdrop" onClick={handleResetAndClose}>
+    <div className="modal-backdrop" onClick={() => { setSubmittedStatus(false); onClose(); }}>
       <div className="incident-modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="header-title-box">
             <ShieldAlert size={24} className="icon-red" />
             <div>
-              <span className="modal-eyebrow">BIO-SECURITY INCIDENT REPORTING</span>
-              <h2 className="modal-title">Log Farm Health Incident</h2>
+              <span className="modal-eyebrow">{t("incident.eyebrow")}</span>
+              <h2 className="modal-title">{t("incident.title")}</h2>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={handleResetAndClose} aria-label="Close modal">
+          <button className="modal-close-btn" onClick={() => { setSubmittedStatus(false); onClose(); }} aria-label={t("common.close")}>
             <X size={20} />
           </button>
         </div>
 
         {submittedStatus ? (
-          /* Post-submission Success State */
           <div className="submitted-success-card">
             <div className="success-icon-box">
               <CheckCircle2 size={54} color="#154D38" />
             </div>
-            <h3 className="success-title">Report Submitted Successfully</h3>
-            <p className="success-status-badge">
-              Report submitted — awaiting veterinary verification.
-            </p>
+            <h3 className="success-title">{t("incident.successTitle")}</h3>
+            <p className="success-status-badge">{t("incident.successStatus")}</p>
             <p className="success-desc">
-              Your report for <strong>{incidentType}</strong> ({numberAffected} animals affected at {location}) has been routed to the District Veterinary Verification Queue.
+              {t("incident.successDesc", {
+                type: displayIncidentType,
+                count: numberAffected,
+                location,
+              })}
             </p>
             <div className="success-note-box">
               <AlertTriangle size={16} />
-              <span>
-                Note: In compliance with national biosecurity guidelines, an outbreak is not declared automatically until certified veterinary inspection is completed.
-              </span>
+              <span>{t("incident.successNote")}</span>
             </div>
-            <button className="btn-primary-action" onClick={handleResetAndClose}>
-              Done & Return to Dashboard
+            <button className="btn-primary-action" onClick={() => { setSubmittedStatus(false); onClose(); }}>
+              {t("incident.doneReturn")}
             </button>
           </div>
         ) : (
-          /* Form Content — wrapper keeps footer actions visible while body scrolls */
           <form onSubmit={handleSubmit} className="incident-form-wrapper">
             <div className="incident-form-body">
-            <div className="form-grid-two">
+              <div className="form-grid-two">
+                <div className="form-group">
+                  <label className="form-label">{t("incident.category")} *</label>
+                  <select value={incidentType} onChange={(e) => setIncidentType(e.target.value)} className="form-input" required>
+                    {INCIDENT_TYPES.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{t(opt.key)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t("incident.animalSpecies")} *</label>
+                  <select value={animalType} onChange={(e) => setAnimalType(e.target.value)} className="form-input" required>
+                    {ANIMAL_TYPES.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{t(opt.key)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-grid-two">
+                <div className="form-group">
+                  <label className="form-label">{t("incident.numberAffected")} *</label>
+                  <input type="number" min="1" value={numberAffected} onChange={(e) => setNumberAffected(Number(e.target.value))} className="form-input" required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t("incident.dateObserved")} *</label>
+                  <input type="datetime-local" value={dateTime} onChange={(e) => setDateTime(e.target.value)} className="form-input" required />
+                </div>
+              </div>
               <div className="form-group">
-                <label className="form-label">Incident Category *</label>
-                <select
-                  value={incidentType}
-                  onChange={(e) => setIncidentType(e.target.value)}
-                  className="form-input"
-                  required
-                >
-                  <option value="Sudden Mortality Increase">Sudden Mortality Increase</option>
-                  <option value="Respiratory Symptoms">Respiratory Distress Symptoms</option>
-                  <option value="Feed / Water Contamination">Feed or Water Contamination</option>
-                  <option value="Perimeter Fencing Breach">Perimeter Fencing / Bio-Barrier Breach</option>
-                  <option value="Unverified Visitor Entry">Unverified Visitor Entry</option>
-                </select>
+                <label className="form-label">{t("incident.farmZone")} *</label>
+                <div className="input-with-icon">
+                  <MapPin size={18} className="input-icon" />
+                  <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t("incident.zonePlaceholder")} className="form-input pl-10" required />
+                </div>
               </div>
-
               <div className="form-group">
-                <label className="form-label">Animal Species / Batch *</label>
-                <select
-                  value={animalType}
-                  onChange={(e) => setAnimalType(e.target.value)}
-                  className="form-input"
-                  required
-                >
-                  <option value="Poultry (Broilers)">Poultry (Broilers)</option>
-                  <option value="Poultry (Layers)">Poultry (Layers)</option>
-                  <option value="Swine / Pigs (Growers)">Swine / Pigs (Growers)</option>
-                  <option value="Swine / Pigs (Breeding Stock)">Swine / Pigs (Breeding Stock)</option>
-                </select>
+                <label className="form-label">{t("incident.symptoms")}</label>
+                <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("incident.symptomsPlaceholder")} className="form-textarea" />
               </div>
-            </div>
-
-            <div className="form-grid-two">
               <div className="form-group">
-                <label className="form-label">Number Affected *</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={numberAffected}
-                  onChange={(e) => setNumberAffected(Number(e.target.value))}
-                  className="form-input"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Date & Time Observed *</label>
-                <input
-                  type="datetime-local"
-                  value={dateTime}
-                  onChange={(e) => setDateTime(e.target.value)}
-                  className="form-input"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Farm Zone Location *</label>
-              <div className="input-with-icon">
-                <MapPin size={18} className="input-icon" />
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. Shed 02, Isolation Ward"
-                  className="form-input pl-10"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Detailed Symptoms & Observations</label>
-              <textarea
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe health symptoms, temperature spikes, or physical anomalies observed..."
-                className="form-textarea"
-              />
-            </div>
-
-            {/* Evidence Upload Component */}
-            <div className="form-group">
-              <label className="form-label">Upload Photo / Document Evidence</label>
-              <div
-                className="file-upload-dropzone"
-                onClick={() => fileInputRef.current?.click()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                <Upload size={24} className="upload-icon" />
-                <span>Drag & drop evidence photos or click to browse</span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
+                <label className="form-label">{t("incident.uploadEvidence")}</label>
+                <div className="file-upload-dropzone" onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}>
+                  <Upload size={24} className="upload-icon" />
+                  <span>{t("incident.uploadHint")}</span>
+                  <input ref={fileInputRef} type="file" accept="image/*,.pdf" onChange={(e) => {
+                    if (e.target.files?.[0]) {
                       setEvidenceFile(e.target.files[0]);
                       setFileName(e.target.files[0].name);
                     }
-                  }}
-                  className="file-input-hidden"
-                />
-                {fileName && (
-                  <div className="uploaded-preview-tag">
-                    <span>Attached: {fileName}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFileName(null);
-                        setEvidenceFile(null);
-                      }}
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                )}
+                  }} className="file-input-hidden" />
+                  {fileName && (
+                    <div className="uploaded-preview-tag">
+                      <span>{t("incident.attached")}: {fileName}</span>
+                      <button type="button" onClick={() => { setFileName(null); setEvidenceFile(null); }}><X size={14} /></button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            </div>
-
             {submitError && (
               <div className="form-error-banner" role="alert">
                 <AlertTriangle size={16} />
                 <span>{submitError}</span>
               </div>
             )}
-
             <div className="form-actions-row">
-              <button type="button" className="btn-secondary-action" onClick={handleResetAndClose}>
-                Cancel
-              </button>
+              <button type="button" className="btn-secondary-action" onClick={() => onClose()}>{t("common.cancel")}</button>
               <button type="submit" disabled={submitting} className="btn-primary-action">
-                {submitting ? "Submitting Report..." : "Submit Incident Report"}
+                {submitting ? t("incident.submitting") : t("incident.submit")}
               </button>
             </div>
           </form>

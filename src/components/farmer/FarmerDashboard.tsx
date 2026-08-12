@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocale, useTranslation } from "../../context/LocaleContext";
+import { translateContent } from "../../i18n/contentTranslate";
 import { StatusBadge } from "../common/StatusBadge";
 import { farmService, incidentService, riskService } from "../../services/api";
 import type { ChecklistItem, IncidentReport, RiskFactor } from "../../types";
@@ -288,7 +289,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                   <div className={`check-checkbox ${item.completed ? "checked" : ""}`}>
                     {item.completed && <CheckCircle2 size={16} />}
                   </div>
-                  <span className="item-label">{item.title}</span>
+                  <span className="item-label">{translateContent(item.title, t)}</span>
                   {!item.completed && (
                     <span className="action-tag-urgent">{t("dashboard.actionDue")}</span>
                   )}
@@ -322,7 +323,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                   />
                   <div className="timeline-content">
                     <div className="timeline-header">
-                      <strong>{incident.incidentType}</strong>
+                      <strong>{translateContent(incident.incidentType, t)}</strong>
                       <span className="timeline-time">
                         {new Date(incident.dateTime).toLocaleTimeString([], {
                           hour: "2-digit",

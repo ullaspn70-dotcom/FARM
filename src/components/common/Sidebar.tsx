@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className="bioshield-sidebar">
       <div className="sidebar-role-indicator">
-        <span className="role-label">ACTIVE PORTAL</span>
+        <span className="role-label">{t("sidebar.activePortal")}</span>
         <strong className="role-name">
           {role === "farmer"
             ? t("app.portal.farmer")
@@ -131,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {role === "farmer" && (
         <div className="sidebar-quick-actions">
-          <p className="quick-action-title">Quick Actions</p>
+          <p className="quick-action-title">{t("sidebar.quickActions")}</p>
           <button className="btn-primary-action" onClick={onOpenReportIncident}>
             + {t("dashboard.reportIncident")}
           </button>
@@ -152,8 +152,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         <div className="assistant-avatar">A</div>
         <div className="assistant-info">
-          <strong>Aarohi AI Assistant</strong>
-          <span>Biosecurity Advisor — click for tips</span>
+          <strong>{t("sidebar.aarohiTitle")}</strong>
+          <span>{t("sidebar.aarohiSub")}</span>
         </div>
         <HelpCircle size={16} className="assistant-help-icon" />
       </div>

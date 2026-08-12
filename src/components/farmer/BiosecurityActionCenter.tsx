@@ -9,6 +9,7 @@ import {
   getActiveIncidents,
 } from "../../hooks/useActionCenterData";
 import { StatusBadge } from "../common/StatusBadge";
+import { translateContent } from "../../i18n/contentTranslate";
 import { ScoreTrendChart } from "./ScoreTrendChart";
 
 interface BiosecurityActionCenterProps {
@@ -79,7 +80,7 @@ export const BiosecurityActionCenter: React.FC<BiosecurityActionCenterProps> = (
           ) : (
             <ul className="ac-gap-list">
               {gaps.slice(0, 5).map((gap) => (
-                <li key={gap.id}>{gap.title}</li>
+                <li key={gap.id}>{translateContent(gap.title, t)}</li>
               ))}
             </ul>
           )}
@@ -92,7 +93,7 @@ export const BiosecurityActionCenter: React.FC<BiosecurityActionCenterProps> = (
           ) : (
             activeIncidents.slice(0, 3).map((inc) => (
               <div key={inc.id} className="ac-incident-card">
-                <strong>{inc.incidentType}</strong>
+                <strong>{translateContent(inc.incidentType, t)}</strong>
                 <StatusBadge type="incident" value={inc.status} size="sm" />
                 <span className="ac-incident-id">#{inc.id}</span>
               </div>
@@ -109,9 +110,9 @@ export const BiosecurityActionCenter: React.FC<BiosecurityActionCenterProps> = (
               {actions.slice(0, 4).map((act) => (
                 <div key={act.id} className="ac-action-row">
                   <div>
-                    <strong>{act.title}</strong>
+                    <strong>{translateContent(act.title, t)}</strong>
                     <span className={`priority-badge priority-${act.priority}`}>
-                      {act.priority.toUpperCase()}
+                      {t(`actionCenter.priority.${act.priority.toLowerCase() as "high" | "medium" | "low"}`)}
                     </span>
                   </div>
                   <StatusBadge type="action" value={act.status} size="sm" />

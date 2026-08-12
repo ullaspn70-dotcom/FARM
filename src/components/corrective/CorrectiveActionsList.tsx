@@ -7,6 +7,7 @@ import { EvidenceUploadModal } from "./EvidenceUploadModal";
 import { CorrectiveActionTraceability } from "./CorrectiveActionTraceability";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LocaleContext";
+import { translateContent } from "../../i18n/contentTranslate";
 
 export const CorrectiveActionsList: React.FC = () => {
   const { role, activeFarm } = useAuth();
@@ -86,7 +87,7 @@ export const CorrectiveActionsList: React.FC = () => {
                   <React.Fragment key={act.id}>
                   <tr>
                     <td className="cell-main-info">
-                      <strong className="action-item-title">{act.title}</strong>
+                      <strong className="action-item-title">{translateContent(act.title, t)}</strong>
                       <p className="action-item-desc">{act.description}</p>
                       <span className="farm-tag-sub">{t("actions.farmTag")}: {act.farmName}</span>
                       <button
@@ -100,7 +101,7 @@ export const CorrectiveActionsList: React.FC = () => {
                     </td>
                     <td>
                       <span className={`priority-badge priority-${act.priority}`}>
-                        {act.priority.toUpperCase()}
+                        {t(`actionCenter.priority.${act.priority.toLowerCase() as "high" | "medium" | "low"}`)}
                       </span>
                     </td>
                     <td className="cell-person">{act.assignedPerson}</td>
@@ -114,7 +115,11 @@ export const CorrectiveActionsList: React.FC = () => {
                       {act.submittedEvidence ? (
                         <div className="evidence-badge-verified">
                           <CheckCircle2 size={14} color="#154D38" />
-                          <span>Submitted ({act.verificationStatus})</span>
+                          <span>
+                            {t("actions.evidenceSubmittedWithStatus", {
+                              status: translateContent(act.verificationStatus, t),
+                            })}
+                          </span>
                         </div>
                       ) : (
                         <span className="text-muted">{t("actions.evidenceRequired")}</span>

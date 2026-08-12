@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LocaleContext";
 import { passportService, riskService } from "../../services/api";
 import type { BiosecurityPassport, RiskFactor, RiskSummary } from "../../types";
+import { translateContent } from "../../i18n/contentTranslate";
 import { ScoreTrendChart } from "./ScoreTrendChart";
 import { StatusBadge } from "../common/StatusBadge";
 
@@ -138,10 +139,10 @@ export const ScoreHistoryPanel: React.FC = () => {
               <ul className="score-contributors-list">
                 {factors.map((factor) => (
                   <li key={factor.id}>
-                    <strong>{factor.label}</strong>
+                    <strong>{translateContent(factor.label, t)}</strong>
                     <span className="factor-delta-inline">
                       {factor.delta >= 0 ? "+" : ""}
-                      {factor.delta} pts
+                      {factor.delta} {t("score.points")}
                     </span>
                     <p>{factor.description}</p>
                   </li>

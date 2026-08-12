@@ -13,6 +13,8 @@ import QRCode from "qrcode";
 import type { BiosecurityPassport } from "../../types";
 import { passportService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import { useTranslation } from "../../context/LocaleContext";
+import { translateContent } from "../../i18n/contentTranslate";
 
 interface BiosecurityPassportModalProps {
   isOpen: boolean;
@@ -35,6 +37,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
   onClose,
 }) => {
   const { activeFarm } = useAuth();
+  const { t } = useTranslation();
   const [passport, setPassport] = useState<BiosecurityPassport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -61,11 +64,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
         setLoading(false);
       })
       .catch((err) => {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load biosecurity passport for this farm."
-        );
+        setError(err instanceof Error ? err.message : t("passport.error"));
         setLoading(false);
       });
   }, [isOpen, activeFarm.id]);
@@ -102,11 +101,11 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
           <div className="header-left">
             <ShieldCheck size={28} className="shield-icon-badge" />
             <div>
-              <span className="passport-eyebrow">OFFICIAL DIGITAL FARM PROFILE</span>
-              <h2 className="passport-modal-title">Biosecurity Passport</h2>
+              <span className="passport-eyebrow">{t("passport.eyebrow")}</span>
+              <h2 className="passport-modal-title">{t("passport.title")}</h2>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose} aria-label="Close modal">
+          <button className="modal-close-btn" onClick={onClose} aria-label={t("common.close")}>
             <X size={22} />
           </button>
         </div>
@@ -114,15 +113,13 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
         {loading ? (
           <div className="modal-loading-state">
             <div className="spinner" />
-            <p>Retrieving verified digital passport record...</p>
+            <p>{t("passport.loading")}</p>
           </div>
         ) : error ? (
           <div className="modal-loading-state">
             <AlertTriangle size={32} color="#DC2626" />
             <p>{error}</p>
-            <button className="btn-secondary-action" onClick={onClose}>
-              Close
-            </button>
+            <button className="btn-secondary-action" onClick={onClose}>{t("common.close")}</button>
           </div>
         ) : passport ? (
           <div className="passport-body">
@@ -134,7 +131,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
                 <div className="verified-title-row">
                   <h3>{passport.farmName}</h3>
                   <span className="status-pill-verified">
-                    <CheckCircle size={14} /> {passport.complianceStatus}
+                    <CheckCircle size={14} /> {translateContent(passport.complianceStatus, t)}
                   </span>
                 </div>
                 <p className="passport-farm-sub">
@@ -143,7 +140,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
                 </p>
                 <div className="continuous-monitored-tag">
                   <span className="live-dot-green"></span>
-                  <span>Continuously Monitored via AgriSentinel Telemetry</span>
+                  <span>{t("passport.monitored")}</span>
                 </div>
               </div>
 
@@ -153,15 +150,15 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
                     type="button"
                     className={`qr-scan-button ${scanning ? "scanning" : ""}`}
                     onClick={handleQrScan}
-                    title="Tap to scan QR code"
-                    aria-label="Scan biosecurity passport QR code"
+                    title={t("passport.qrScanTitle")}
+                    aria-label={t("passport.qrScanAria")}
                   >
                     <img
                       src={qrDataUrl}
                       alt={`Scannable QR code for ${passport.farmName}`}
                       className="passport-qr-image"
                     />
-                    {scanning && <span className="qr-scan-overlay">Scanning...</span>}
+                    {scanning && <span className="qr-scan-overlay">{t("passport.scanning")}</span>}
                   </button>
                 ) : (
                   <QrCode size={48} />
@@ -169,77 +166,76 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
                 <span className="qr-code-text">{passport.passportQrCode}</span>
                 <button type="button" className="btn-qr-scan" onClick={handleQrScan}>
                   <ScanLine size={14} />
-                  {showScanResult ? "Scan Again" : "Tap QR to Scan"}
+                  {showScanResult ? t("passport.scanAgain") : t("passport.tapQr")}
                 </button>
-                <p className="qr-hint-text">Point your phone camera at the QR code to verify this farm.</p>
+                <p className="qr-hint-text">{t("passport.qrHint")}</p>
               </div>
             </div>
 
             {showScanResult && (
               <div className="qr-scan-result-panel">
                 <h4 className="section-title">
-                  <CheckCircle size={18} color="#16A34A" /> QR Scan Verified Successfully
+                  <CheckCircle size={18} color="#16A34A" /> {t("passport.scanVerified")}
                 </h4>
                 <div className="qr-scan-grid">
                   <div className="scan-result-item">
-                    <span>Farm Name</span>
+                    <span>{t("passport.farmName")}</span>
                     <strong>{passport.farmName}</strong>
                   </div>
                   <div className="scan-result-item">
-                    <span>Farm ID</span>
+                    <span>{t("passport.farmId")}</span>
                     <strong>{passport.farmId}</strong>
                   </div>
                   <div className="scan-result-item">
-                    <span>Owner</span>
+                    <span>{t("passport.owner")}</span>
                     <strong>{passport.ownerName}</strong>
                   </div>
                   <div className="scan-result-item">
-                    <span>Biosecurity Score</span>
+                    <span>{t("passport.biosecurityScore")}</span>
                     <strong>{passport.biosecurityScore}/100</strong>
                   </div>
                   <div className="scan-result-item">
-                    <span>Compliance Status</span>
-                    <strong>{passport.complianceStatus}</strong>
+                    <span>{t("passport.complianceStatusLabel")}</span>
+                    <strong>{translateContent(passport.complianceStatus, t)}</strong>
                   </div>
                   <div className="scan-result-item">
-                    <span>Passport Code</span>
+                    <span>{t("passport.passportCodeLabel")}</span>
                     <strong>{passport.passportQrCode}</strong>
                   </div>
                 </div>
                 <p className="qr-scan-note">
-                  Authentic AgriSentinel digital passport — registered in the district biosecurity
-                  registry. Location: {passport.location}
+                  {t("passport.scanNote", { location: passport.location })}
                 </p>
               </div>
             )}
 
             <div className="passport-info-grid">
               <div className="info-tile">
-                <span className="tile-label">Location / Sector</span>
+                <span className="tile-label">{t("passport.locationSector")}</span>
                 <strong className="tile-value">{passport.location}</strong>
               </div>
               <div className="info-tile">
-                <span className="tile-label">Farm Owner</span>
+                <span className="tile-label">{t("passport.farmOwner")}</span>
                 <strong className="tile-value">{passport.ownerName}</strong>
               </div>
               <div className="info-tile">
-                <span className="tile-label">Capacity / Animals</span>
+                <span className="tile-label">{t("passport.capacity")}</span>
                 <strong className="tile-value">
-                  {passport.animalCount} / {passport.capacity} Head
+                  {passport.animalCount} / {passport.capacity} {t("passport.headUnit")}
                 </strong>
               </div>
               <div className="info-tile">
-                <span className="tile-label">Last Govt Inspection</span>
+                <span className="tile-label">{t("passport.lastInspection")}</span>
                 <strong className="tile-value">{passport.lastInspectionDate}</strong>
               </div>
             </div>
 
             <div className="passport-scores-section">
-              <h4 className="section-title">Biosecurity Score Breakdown</h4>
+              <h4 className="section-title">{t("passport.scoreBreakdown")}</h4>
               <div className="score-bars-grid">
                 <div className="score-item">
                   <div className="score-label-row">
-                    <span>Overall Biosecurity Index</span>
+                    <span>{t("passport.overallIndex")}</span>
                     <strong>{passport.biosecurityScore}/100</strong>
                   </div>
                   <div className="bar-bg">
@@ -252,7 +248,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
 
                 <div className="score-item">
                   <div className="score-label-row">
-                    <span>Shed & Facility Hygiene</span>
+                    <span>{t("passport.hygieneFacility")}</span>
                     <strong>{passport.hygieneScore}/100</strong>
                   </div>
                   <div className="bar-bg">
@@ -265,7 +261,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
 
                 <div className="score-item">
                   <div className="score-label-row">
-                    <span>Visitor & Vehicle Control</span>
+                    <span>{t("passport.visitorVehicle")}</span>
                     <strong>{passport.visitorControlScore}/100</strong>
                   </div>
                   <div className="bar-bg">
@@ -278,7 +274,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
 
                 <div className="score-item">
                   <div className="score-label-row">
-                    <span>Quarantine & Isolation Protocol</span>
+                    <span>{t("passport.quarantineIsolation")}</span>
                     <strong>{passport.quarantineProtocolScore}/100</strong>
                   </div>
                   <div className="bar-bg">
@@ -291,7 +287,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
 
                 <div className="score-item">
                   <div className="score-label-row">
-                    <span>Vaccination Rate</span>
+                    <span>{t("passport.vaccinationRate")}</span>
                     <strong>{passport.vaccinationCoverage}%</strong>
                   </div>
                   <div className="bar-bg">
@@ -304,7 +300,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
 
                 <div className="score-item">
                   <div className="score-label-row">
-                    <span>Waste & Carcass Management</span>
+                    <span>{t("passport.wasteCarcass")}</span>
                     <strong>{passport.wasteManagementScore}/100</strong>
                   </div>
                   <div className="bar-bg">
@@ -318,10 +314,10 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
             </div>
 
             <div className="passport-inspection-history">
-              <h4 className="section-title">Verified Inspection Audit History</h4>
+              <h4 className="section-title">{t("passport.inspectionHistory")}</h4>
               <div className="history-list">
                 {passport.inspectionHistory.length === 0 ? (
-                  <p className="timeline-desc">No completed inspections recorded yet.</p>
+                  <p className="timeline-desc">{t("passport.noInspections")}</p>
                 ) : (
                   passport.inspectionHistory.map((item) => (
                     <div key={item.id} className="history-card">
@@ -331,7 +327,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
                           <span>{item.date}</span>
                         </div>
                         <span className={`result-tag ${item.result.toLowerCase().replace(" ", "-")}`}>
-                          {item.result}
+                          {translateContent(item.result, t)}
                         </span>
                       </div>
                       <div className="history-details">
@@ -346,12 +342,9 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
 
             <div className="passport-footer">
               <p className="passport-disclaimer">
-                <AlertTriangle size={14} className="inline-icon" /> Official Digital Passport
-                generated by AgriSentinel Platform.
+                <AlertTriangle size={14} className="inline-icon" /> {t("passport.disclaimer")}
               </p>
-              <button className="btn-secondary-action" onClick={onClose}>
-                Close Passport Profile
-              </button>
+              <button className="btn-secondary-action" onClick={onClose}>{t("passport.close")}</button>
             </div>
           </div>
         ) : null}

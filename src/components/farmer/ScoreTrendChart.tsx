@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "../../context/LocaleContext";
 
 interface ScoreTrendChartProps {
   history: { time: string; score: number }[];
@@ -6,6 +7,7 @@ interface ScoreTrendChartProps {
 }
 
 export const ScoreTrendChart: React.FC<ScoreTrendChartProps> = ({ history, compact = false }) => {
+  const { t } = useTranslation();
   if (history.length === 0) {
     return null;
   }
@@ -43,7 +45,7 @@ export const ScoreTrendChart: React.FC<ScoreTrendChartProps> = ({ history, compa
                 >
                   <span className="bar-val">{point.score}</span>
                 </div>
-                <span className="day-name">{isLast ? "Latest" : dateLabel}</span>
+                <span className="day-name">{isLast ? t("score.latest") : dateLabel}</span>
               </div>
             );
           })}

@@ -1,27 +1,29 @@
 import React from "react";
 import { Info } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useTranslation } from "../../context/LocaleContext";
 import { StatusBadge } from "../common/StatusBadge";
 import { ScoreHistoryPanel } from "../farmer/ScoreHistoryPanel";
 
-function riskLabel(level: string): string {
-  if (level === "safe" || level === "low") return "LOW RISK (SAFE)";
-  if (level === "caution" || level === "medium") return "MEDIUM RISK (CAUTION)";
-  if (level === "critical" || level === "high") return "HIGH RISK (CRITICAL)";
+function riskLabel(level: string, t: (k: string) => string): string {
+  if (level === "safe" || level === "low") return t("status.risk.safe");
+  if (level === "caution" || level === "medium") return t("status.risk.caution");
+  if (level === "critical" || level === "high") return t("status.risk.critical");
   return level.toUpperCase();
 }
 
 export const RiskDashboard: React.FC = () => {
   const { activeFarm } = useAuth();
+  const { t } = useTranslation();
 
   return (
     <div className="risk-dashboard-view">
       <div className="risk-header-card">
         <div>
-          <span className="eyebrow-text">BIO-SECURITY RISK ANALYTICS</span>
-          <h2 className="view-title">Dynamic Risk Score & Factor Breakdown</h2>
+          <span className="eyebrow-text">{t("risk.eyebrow")}</span>
+          <h2 className="view-title">{t("risk.title")}</h2>
           <p className="view-subtitle">
-            Farm: <strong>{activeFarm.name}</strong> ({activeFarm.id}) • Type:{" "}
+            {t("risk.farmLabel")}: <strong>{activeFarm.name}</strong> ({activeFarm.id}) • {t("risk.typeLabel")}:{" "}
             <strong>{activeFarm.farmType.toUpperCase()}</strong>
           </p>
         </div>
@@ -36,12 +38,10 @@ export const RiskDashboard: React.FC = () => {
           </div>
           <div className="gauge-text-info">
             <h3 className="gauge-status-title">
-              Current Farm Risk Level:{" "}
-              <strong className="text-emerald">{riskLabel(activeFarm.riskLevel)}</strong>
+              {t("risk.currentLevel")}:{" "}
+              <strong className="text-emerald">{riskLabel(activeFarm.riskLevel, t)}</strong>
             </h3>
-            <p className="gauge-status-desc">
-              Score reflects visitor movement, sanitation logs, incidents, and corrective action status from the backend.
-            </p>
+            <p className="gauge-status-desc">{t("risk.dataSource")}</p>
           </div>
         </div>
       </div>
@@ -51,10 +51,8 @@ export const RiskDashboard: React.FC = () => {
       <div className="risk-disclaimer-box">
         <Info size={20} className="disclaimer-icon" />
         <div>
-          <strong>Data Source</strong>
-          <p>
-            Score history and risk factors are loaded from the AgriSentinel API. They reflect recorded farm telemetry and verified events — not simulated values.
-          </p>
+          <strong>{t("risk.disclaimerTitle")}</strong>
+          <p>{t("risk.dataSource")}</p>
         </div>
       </div>
     </div>
