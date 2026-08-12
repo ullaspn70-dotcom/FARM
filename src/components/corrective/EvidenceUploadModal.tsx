@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { X, Upload, MapPin, Clock, FileText } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { X, Upload, MapPin, Clock, FileText, AlertTriangle } from "lucide-react";
 import type { CorrectiveAction } from "../../types";
 import { correctiveActionService } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 interface EvidenceUploadModalProps {
   action: CorrectiveAction | null;
@@ -16,31 +17,56 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
   onClose,
   onSubmitted,
 }) => {
-  const [fileName, setFileName] = useState("gate_basin_refill_proof.jpg");
+  const { activeFarm } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState("");
   const [notes, setNotes] = useState("");
-  const locationTag = "Lat: 23.3441° N, Long: 85.3096° E (Main Gate)";
-  const [timestamp] = useState(
-    new Date().toLocaleString("en-IN", { timeZone: "IST" }) + " IST"
-  );
+  const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const locationTag = activeFarm.coordinates
+    ? `Lat: ${activeFarm.coordinates.lat}° N, Long: ${activeFarm.coordinates.lng}° E (${activeFarm.name})`
+    : `${activeFarm.location} (${activeFarm.name})`;
+
+  const [timestamp] = useState(
+    new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST"
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      setEvidenceFile(null);
+      setFileName("");
+      setNotes("");
+      setSubmitError("");
+      setSubmitting(false);
+    }
+  }, [isOpen, action?.id]);
 
   if (!isOpen || !action) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!evidenceFile) {
+      setSubmitError("Please select a photo or document before submitting.");
+      return;
+    }
+
     setSubmitting(true);
+    setSubmitError("");
     try {
       await correctiveActionService.submitEvidence(action.id, {
-        fileUrl: "#",
-        fileName,
+        file: evidenceFile,
         notes: notes || "Disinfection evidence recorded and verified on site.",
         location: locationTag,
       });
-      setSubmitting(false);
       onSubmitted();
       onClose();
     } catch (err) {
-      console.error(err);
+      setSubmitError(
+        err instanceof Error ? err.message : "Failed to upload evidence. Please try again."
+      );
+    } finally {
       setSubmitting(false);
     }
   };
@@ -64,17 +90,28 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="evidence-form-body">
-          {/* File Upload Zone */}
           <div className="form-group">
             <label className="form-label">Evidence File / Photo *</label>
-            <div className="file-upload-dropzone">
+            <div
+              className="file-upload-dropzone"
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+              }}
+              role="button"
+              tabIndex={0}
+            >
               <Upload size={28} className="upload-icon-green" />
               <span>Click to select or drop photo of completed action</span>
               <input
+                ref={fileInputRef}
                 type="file"
+                accept="image/*,.pdf"
                 onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
+                    setEvidenceFile(e.target.files[0]);
                     setFileName(e.target.files[0].name);
+                    setSubmitError("");
                   }
                 }}
                 className="file-input-hidden"
@@ -88,7 +125,6 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
             </div>
           </div>
 
-          {/* Automatic Metadata Displays */}
           <div className="metadata-readonly-row">
             <div className="meta-tag-box">
               <Clock size={16} className="icon-sub" />
@@ -117,6 +153,13 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
               className="form-textarea"
             />
           </div>
+
+          {submitError && (
+            <div className="form-error-banner" role="alert">
+              <AlertTriangle size={16} />
+              <span>{submitError}</span>
+            </div>
+          )}
 
           <div className="form-actions-row">
             <button type="button" className="btn-secondary-action" onClick={onClose}>

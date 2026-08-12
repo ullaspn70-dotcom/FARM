@@ -29,22 +29,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeFarm, setActiveFarm] = useState<Farm>(initialFarm);
   const [allFarms, setAllFarms] = useState<Farm[]>([initialFarm]);
 
-  useEffect(() => {
-    loginDemoRole("farmer").catch(() => {
-      // Demo login optional when API is unavailable
-    });
+  const loadFarms = async () => {
+    const farms = await farmService.getAllFarms();
+    if (farms.length > 0) {
+      setAllFarms(farms);
+      setActiveFarm((current) => {
+        const stillExists = farms.find((f) => f.id === current.id);
+        return stillExists || farms[0];
+      });
+    }
+  };
 
-    farmService
-      .getAllFarms()
-      .then((farms) => {
-        if (farms.length > 0) {
-          setAllFarms(farms);
-          setActiveFarm((current) => {
-            const stillExists = farms.find((f) => f.id === current.id);
-            return stillExists || farms[0];
-          });
-        }
-      })
+  useEffect(() => {
+    loginDemoRole("farmer")
+      .then(() => loadFarms())
       .catch(() => {
         // Backend unavailable — keep initial mock farm for offline/demo fallback
       });
@@ -54,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRoleState(nextRole);
     try {
       await loginDemoRole(nextRole);
+      await loadFarms();
     } catch (err) {
       console.error("Demo login failed:", err);
     }

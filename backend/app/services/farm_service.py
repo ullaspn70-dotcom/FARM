@@ -18,12 +18,21 @@ from app.schemas.farm import FarmCreate, FarmUpdate
 from app.utils.helpers import farm_risk_level, generate_id
 
 
+DEMO_FARMER_EMAIL = "farmer@bioshield.local"
+
+
 class FarmService:
+    @staticmethod
+    def _is_demo_farmer(user: User | None) -> bool:
+        return user is not None and user.role == UserRole.FARMER and user.email == DEMO_FARMER_EMAIL
+
     @staticmethod
     def _accessible_farm_ids(user: User | None) -> list[str] | None:
         if user is None:
             return None
         if user.role in (UserRole.VETERINARIAN, UserRole.OFFICER):
+            return None
+        if FarmService._is_demo_farmer(user):
             return None
         return [a.farm_id for a in user.farm_assignments]
 
@@ -52,6 +61,10 @@ class FarmService:
         if user is None:
             return
         if user.role == UserRole.FARMER:
+            if FarmService._is_demo_farmer(user):
+                if user.district_id and farm.district_id != user.district_id:
+                    raise ForbiddenError("Farm is outside your district.")
+                return
             allowed = {a.farm_id for a in user.farm_assignments}
             if farm.id not in allowed:
                 raise ForbiddenError("You do not have access to this farm.")

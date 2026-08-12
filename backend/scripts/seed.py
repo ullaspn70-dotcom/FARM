@@ -179,14 +179,32 @@ def seed() -> None:
             )
 
         db.add(UserFarmAssignment(user_id=farmer.id, farm_id="FARM-JH-2026-0487", is_owner=True))
+        for farm_id in ("FARM-JH-2026-0102", "FARM-JH-2026-0331", "FARM-JH-2026-0789"):
+            db.add(UserFarmAssignment(user_id=farmer.id, farm_id=farm_id, is_owner=False))
 
-        db.add_all([
-            ChecklistItem(id="check-1", farm_id="FARM-JH-2026-0487", title="Entry gate vehicle dip disinfected", completed=True),
-            ChecklistItem(id="check-2", farm_id="FARM-JH-2026-0487", title="Water chlorination level verified (2.5 ppm)", completed=True),
-            ChecklistItem(id="check-3", farm_id="FARM-JH-2026-0487", title="Daily flock mortality & morbidity logged", completed=True),
-            ChecklistItem(id="check-4", farm_id="FARM-JH-2026-0487", title="Visitor digital check-in records verified", completed=True),
-            ChecklistItem(id="check-5", farm_id="FARM-JH-2026-0487", title="Shed 02 deep sanitation protocol check", completed=False, priority="important"),
-        ])
+        checklist_titles = [
+            "Entry gate vehicle dip disinfected",
+            "Water chlorination level verified (2.5 ppm)",
+            "Daily mortality & morbidity logged",
+            "Visitor digital check-in records verified",
+            "Shed deep sanitation protocol check",
+        ]
+        for farm_id in (
+            "FARM-JH-2026-0487",
+            "FARM-JH-2026-0102",
+            "FARM-JH-2026-0331",
+            "FARM-JH-2026-0789",
+        ):
+            for index, title in enumerate(checklist_titles, start=1):
+                db.add(
+                    ChecklistItem(
+                        id=f"{farm_id}-check-{index}",
+                        farm_id=farm_id,
+                        title=title,
+                        completed=index <= 3 if farm_id == "FARM-JH-2026-0487" else index <= 2,
+                        priority="important" if index == len(checklist_titles) else "normal",
+                    )
+                )
 
         db.add(
             Inspection(
@@ -272,7 +290,31 @@ def seed() -> None:
             evidence_required=True,
             verification_status=VerificationStatus.UNVERIFIED,
         )
-        db.add_all([act1, act2, act3])
+        act4 = CorrectiveAction(
+            id="ACT-2026-115",
+            farm_id="FARM-JH-2026-0331",
+            title="Upgrade Poultry Shed Ventilation Filters",
+            description="Replace aging HEPA filters in Shed 01 ventilation system.",
+            priority=ActionPriority.MEDIUM,
+            assigned_person="Anita Devi",
+            deadline=date(2026, 8, 14),
+            status=CorrectiveActionStatus.IN_PROGRESS,
+            evidence_required=True,
+            verification_status=VerificationStatus.UNVERIFIED,
+        )
+        act5 = CorrectiveAction(
+            id="ACT-2026-120",
+            farm_id="FARM-JH-2026-0789",
+            title="Document Mixed-Herd Vaccination Schedule",
+            description="Upload latest vaccination records for poultry and pig batches.",
+            priority=ActionPriority.LOW,
+            assigned_person="Vikram Singh",
+            deadline=date(2026, 8, 16),
+            status=CorrectiveActionStatus.PENDING,
+            evidence_required=True,
+            verification_status=VerificationStatus.UNVERIFIED,
+        )
+        db.add_all([act1, act2, act3, act4, act5])
         db.add(
             ActionEvidence(
                 id="AEV-001",

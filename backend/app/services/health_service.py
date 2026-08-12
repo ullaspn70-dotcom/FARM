@@ -45,10 +45,34 @@ class HealthRecordService:
         return record
 
 
+DEFAULT_CHECKLIST_TITLES = [
+    "Entry gate vehicle dip disinfected",
+    "Water chlorination level verified (2.5 ppm)",
+    "Daily mortality & morbidity logged",
+    "Visitor digital check-in records verified",
+    "Shed deep sanitation protocol check",
+]
+
+
 class ChecklistService:
     @staticmethod
     def list_items(db: Session, farm_id: str, user=None) -> list[ChecklistItem]:
         FarmService.get_farm(db, farm_id, user)
+        items = db.query(ChecklistItem).filter(ChecklistItem.farm_id == farm_id).all()
+        if items:
+            return items
+
+        for index, title in enumerate(DEFAULT_CHECKLIST_TITLES, start=1):
+            db.add(
+                ChecklistItem(
+                    id=f"{farm_id}-check-{index}",
+                    farm_id=farm_id,
+                    title=title,
+                    completed=index <= 3,
+                    priority="important" if index == len(DEFAULT_CHECKLIST_TITLES) else "normal",
+                )
+            )
+        db.commit()
         return db.query(ChecklistItem).filter(ChecklistItem.farm_id == farm_id).all()
 
     @staticmethod

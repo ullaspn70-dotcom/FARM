@@ -146,12 +146,13 @@ export const correctiveActionService = {
 
   async submitEvidence(
     actionId: string,
-    evidence: { fileUrl: string; fileName: string; notes: string; location: string }
+    evidence: { file: File; notes: string; location: string }
   ): Promise<CorrectiveAction> {
-    return apiFetch<CorrectiveAction>(`/corrective-actions/${actionId}/evidence/json`, {
-      method: "POST",
-      body: JSON.stringify(evidence),
-    });
+    const form = new FormData();
+    form.append("file", evidence.file);
+    form.append("notes", evidence.notes);
+    form.append("location", evidence.location);
+    return apiFetchForm<CorrectiveAction>(`/corrective-actions/${actionId}/evidence`, form);
   },
 
   async verifyAction(actionId: string, approved: boolean): Promise<CorrectiveAction> {

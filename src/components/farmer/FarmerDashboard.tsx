@@ -33,8 +33,11 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [riskFactors, setRiskFactors] = useState<RiskFactor[]>([]);
 
+  const [loadError, setLoadError] = useState("");
+
   useEffect(() => {
     let cancelled = false;
+    setLoadError("");
 
     Promise.all([
       farmService.getChecklist(activeFarm.id),
@@ -53,6 +56,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
           setChecklist([]);
           setIncidents([]);
           setRiskFactors([]);
+          setLoadError("Unable to load farm data. Please refresh the page.");
         }
       });
 
@@ -190,6 +194,13 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
           </button>
         </div>
       </section>
+
+      {loadError && (
+        <div className="form-error-banner" role="alert">
+          <AlertCircle size={16} />
+          <span>{loadError}</span>
+        </div>
+      )}
 
       <div className="dashboard-metrics-grid">
         <div className="metric-card">
