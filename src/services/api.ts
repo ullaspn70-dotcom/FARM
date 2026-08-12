@@ -14,6 +14,24 @@ import type {
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 const API_V1 = `${API_BASE}/api/v1`;
 
+function parseApiError(text: string, status: number): string {
+  try {
+    const payload = JSON.parse(text) as {
+      error?: { message?: string };
+      detail?: string | { msg?: string }[];
+    };
+    if (payload.error?.message) return payload.error.message;
+    if (typeof payload.detail === "string") return payload.detail;
+    if (Array.isArray(payload.detail) && payload.detail[0]?.msg) {
+      return payload.detail.map((d) => d.msg).join(", ");
+    }
+  } catch {
+    // plain text error body
+  }
+  if (text) return text;
+  return `Request failed (${status})`;
+}
+
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem("accessToken");
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -28,7 +46,7 @@ async function apiFetchForm<T>(path: string, formData: FormData, method = "POST"
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `API error ${response.status}`);
+    throw new Error(parseApiError(text, response.status));
   }
 
   return response.json() as Promise<T>;
@@ -48,7 +66,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `API error ${response.status}`);
+    throw new Error(parseApiError(text, response.status));
   }
 
   if (response.status === 204) {

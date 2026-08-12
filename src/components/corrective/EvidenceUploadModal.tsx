@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { X, Upload, MapPin, Clock, FileText, AlertTriangle } from "lucide-react";
+import { X, Upload, MapPin, Clock, FileText, AlertTriangle, CheckCircle2 } from "lucide-react";
 import type { CorrectiveAction } from "../../types";
 import { correctiveActionService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
@@ -23,6 +23,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
   const [fileName, setFileName] = useState("");
   const [notes, setNotes] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const locationTag = activeFarm.coordinates
@@ -39,29 +40,41 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
       setFileName("");
       setNotes("");
       setSubmitError("");
+      setSubmitSuccess(false);
       setSubmitting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, [isOpen, action?.id]);
 
   if (!isOpen || !action) return null;
 
+  const handleFileSelect = (file: File) => {
+    setEvidenceFile(file);
+    setFileName(file.name);
+    setSubmitError("");
+    setSubmitSuccess(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!evidenceFile) {
       setSubmitError("Please select a photo or document before submitting.");
+      fileInputRef.current?.click();
       return;
     }
 
     setSubmitting(true);
     setSubmitError("");
+    setSubmitSuccess(false);
     try {
       await correctiveActionService.submitEvidence(action.id, {
         file: evidenceFile,
         notes: notes || "Disinfection evidence recorded and verified on site.",
         location: locationTag,
       });
+      setSubmitSuccess(true);
       onSubmitted();
-      onClose();
+      window.setTimeout(() => onClose(), 900);
     } catch (err) {
       setSubmitError(
         err instanceof Error ? err.message : "Failed to upload evidence. Please try again."
@@ -91,10 +104,18 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
 
         <form onSubmit={handleSubmit} className="evidence-form-body">
           <div className="form-group">
-            <label className="form-label">Evidence File / Photo *</label>
+            <label className="form-label" htmlFor="evidence-file-input">
+              Evidence File / Photo *
+            </label>
             <div
               className="file-upload-dropzone"
               onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files?.[0];
+                if (file) handleFileSelect(file);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
               }}
@@ -102,17 +123,16 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
               tabIndex={0}
             >
               <Upload size={28} className="upload-icon-green" />
-              <span>Click to select or drop photo of completed action</span>
+              <span>Click here to browse or drop your photo</span>
               <input
+                id="evidence-file-input"
                 ref={fileInputRef}
                 type="file"
                 accept="image/*,.pdf"
+                onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    setEvidenceFile(e.target.files[0]);
-                    setFileName(e.target.files[0].name);
-                    setSubmitError("");
-                  }
+                  const file = e.target.files?.[0];
+                  if (file) handleFileSelect(file);
                 }}
                 className="file-input-hidden"
               />
@@ -161,12 +181,19 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
             </div>
           )}
 
+          {submitSuccess && (
+            <div className="form-success-banner" role="status">
+              <CheckCircle2 size={16} />
+              <span>Evidence uploaded successfully!</span>
+            </div>
+          )}
+
           <div className="form-actions-row">
             <button type="button" className="btn-secondary-action" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" disabled={submitting} className="btn-primary-action">
-              {submitting ? "Uploading Evidence..." : "Submit Evidence"}
+            <button type="submit" disabled={submitting || submitSuccess} className="btn-primary-action">
+              {submitting ? "Uploading Evidence..." : submitSuccess ? "Uploaded!" : "Submit Evidence"}
             </button>
           </div>
         </form>

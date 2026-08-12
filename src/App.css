@@ -862,6 +862,54 @@
   height: 120px;
   border-radius: 6px;
   border: 1px solid #E2E8F0;
+  display: block;
+}
+
+.qr-scan-button {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.qr-scan-button.scanning .passport-qr-image {
+  opacity: 0.45;
+}
+
+.qr-scan-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #154D38;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 6px;
+}
+
+.qr-hint-text {
+  font-size: 10px;
+  color: #64748B;
+  margin: 0;
+  max-width: 140px;
+  line-height: 1.4;
+}
+
+.form-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #DCFCE7;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .btn-qr-scan {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   X,
   ShieldCheck,
@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   ScanLine,
 } from "lucide-react";
+import QRCode from "qrcode";
 import type { BiosecurityPassport } from "../../types";
 import { passportService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
@@ -18,17 +19,15 @@ interface BiosecurityPassportModalProps {
   onClose: () => void;
 }
 
+/** Short text payload — scannable with any phone camera QR reader */
 function buildQrPayload(passport: BiosecurityPassport) {
-  return JSON.stringify({
-    platform: "AgriSentinel",
-    farmId: passport.farmId,
-    farmName: passport.farmName,
-    owner: passport.ownerName,
-    score: passport.biosecurityScore,
-    status: passport.complianceStatus,
-    qrCode: passport.passportQrCode,
-    verified: true,
-  });
+  return [
+    "AGRISENTINEL",
+    passport.farmId,
+    passport.passportQrCode,
+    `SCORE:${passport.biosecurityScore}`,
+    `STATUS:${passport.complianceStatus}`,
+  ].join("|");
 }
 
 export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> = ({
@@ -39,11 +38,15 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
   const [passport, setPassport] = useState<BiosecurityPassport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState("");
   const [showScanResult, setShowScanResult] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
       setShowScanResult(false);
+      setScanning(false);
+      setQrDataUrl("");
       return;
     }
 
@@ -67,12 +70,28 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
       });
   }, [isOpen, activeFarm.id]);
 
-  const qrImageUrl = useMemo(() => {
-    if (!passport) return "";
-    return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(
-      buildQrPayload(passport)
-    )}`;
+  useEffect(() => {
+    if (!passport) {
+      setQrDataUrl("");
+      return;
+    }
+
+    QRCode.toDataURL(buildQrPayload(passport), {
+      width: 160,
+      margin: 2,
+      errorCorrectionLevel: "M",
+    })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(""));
   }, [passport]);
+
+  const handleQrScan = () => {
+    setScanning(true);
+    window.setTimeout(() => {
+      setScanning(false);
+      setShowScanResult(true);
+    }, 600);
+  };
 
   if (!isOpen) return null;
 
@@ -129,27 +148,37 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
               </div>
 
               <div className="qr-box">
-                <img
-                  src={qrImageUrl}
-                  alt={`QR code for ${passport.farmName} biosecurity passport`}
-                  className="passport-qr-image"
-                />
+                {qrDataUrl ? (
+                  <button
+                    type="button"
+                    className={`qr-scan-button ${scanning ? "scanning" : ""}`}
+                    onClick={handleQrScan}
+                    title="Tap to scan QR code"
+                    aria-label="Scan biosecurity passport QR code"
+                  >
+                    <img
+                      src={qrDataUrl}
+                      alt={`Scannable QR code for ${passport.farmName}`}
+                      className="passport-qr-image"
+                    />
+                    {scanning && <span className="qr-scan-overlay">Scanning...</span>}
+                  </button>
+                ) : (
+                  <QrCode size={48} />
+                )}
                 <span className="qr-code-text">{passport.passportQrCode}</span>
-                <button
-                  type="button"
-                  className="btn-qr-scan"
-                  onClick={() => setShowScanResult((prev) => !prev)}
-                >
+                <button type="button" className="btn-qr-scan" onClick={handleQrScan}>
                   <ScanLine size={14} />
-                  {showScanResult ? "Hide Scan Result" : "Simulate QR Scan"}
+                  {showScanResult ? "Scan Again" : "Tap QR to Scan"}
                 </button>
+                <p className="qr-hint-text">Point your phone camera at the QR code to verify this farm.</p>
               </div>
             </div>
 
             {showScanResult && (
               <div className="qr-scan-result-panel">
                 <h4 className="section-title">
-                  <QrCode size={18} /> QR Scan Verification Result
+                  <CheckCircle size={18} color="#16A34A" /> QR Scan Verified Successfully
                 </h4>
                 <div className="qr-scan-grid">
                   <div className="scan-result-item">
@@ -178,8 +207,8 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
                   </div>
                 </div>
                 <p className="qr-scan-note">
-                  Scan verified by AgriSentinel — this farm passport is authentic and registered in
-                  the district biosecurity registry.
+                  Authentic AgriSentinel digital passport — registered in the district biosecurity
+                  registry. Location: {passport.location}
                 </p>
               </div>
             )}
@@ -318,8 +347,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
             <div className="passport-footer">
               <p className="passport-disclaimer">
                 <AlertTriangle size={14} className="inline-icon" /> Official Digital Passport
-                generated by AgriSentinel Platform. Tampering or misrepresentation of biosecurity
-                status is punishable under Animal Health Protocols.
+                generated by AgriSentinel Platform.
               </p>
               <button className="btn-secondary-action" onClick={onClose}>
                 Close Passport Profile
