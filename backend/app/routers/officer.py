@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_optional_user, require_roles
 from app.database.session import get_db
-from app.models.enums import CorrectiveActionStatus, IncidentStatus, UserRole
+from app.models.enums import CorrectiveActionStatus, IncidentStatus, InspectionStatus, UserRole
+from app.models.farm import Farm
 from app.models.user import User
 from app.schemas.farm import FarmResponse
 from app.schemas.officer import (
@@ -74,6 +75,33 @@ def farm_profile(
     )
 
 
+def _inspection_to_response(db: Session, inspection) -> InspectionResponse:
+    farm = db.query(Farm).filter(Farm.id == inspection.farm_id).first()
+    return InspectionResponse(
+        id=inspection.id,
+        farm_id=inspection.farm_id,
+        farm_name=farm.name if farm else None,
+        status=inspection.status.value,
+        scheduled_at=inspection.scheduled_at.isoformat() if inspection.scheduled_at else "",
+        inspector_name=inspection.inspector_name,
+        result=inspection.result.value if inspection.result else None,
+        notes=inspection.notes,
+    )
+
+
+@router.get("/inspections", response_model=list[InspectionResponse])
+def list_inspections(
+    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(require_roles(UserRole.OFFICER, UserRole.VETERINARIAN))] = None,
+):
+    inspections = InspectionService.list_inspections(
+        db,
+        district_id=current_user.district_id,
+        status=InspectionStatus.SCHEDULED,
+    )
+    return [_inspection_to_response(db, inspection) for inspection in inspections]
+
+
 @router.post("/inspections", response_model=InspectionResponse, status_code=201)
 def schedule_inspection(
     payload: InspectionCreate,
@@ -81,12 +109,4 @@ def schedule_inspection(
     current_user: Annotated[User, Depends(require_roles(UserRole.OFFICER, UserRole.VETERINARIAN))] = None,
 ):
     inspection = InspectionService.schedule(db, payload, current_user)
-    return InspectionResponse(
-        id=inspection.id,
-        farm_id=inspection.farm_id,
-        status=inspection.status.value,
-        scheduled_at=inspection.scheduled_at.isoformat() if inspection.scheduled_at else "",
-        inspector_name=inspection.inspector_name,
-        result=inspection.result.value if inspection.result else None,
-        notes=inspection.notes,
-    )
+    return _inspection_to_response(db, inspection)

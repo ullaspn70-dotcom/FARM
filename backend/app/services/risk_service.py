@@ -104,6 +104,63 @@ class RiskEngine:
                 if total_actions == 0 or verified_actions >= total_actions:
                     RiskEngine.deactivate_incident_factors(db, farm_id, incident.id)
 
+        RiskEngine.deactivate_orphan_incident_factors(db, farm_id)
+
+    @staticmethod
+    def deactivate_orphan_incident_factors(db: Session, farm_id: str) -> None:
+        """Deactivate legacy incident factors with no open incident lifecycle."""
+        open_statuses = {
+            IncidentStatus.REPORTED,
+            IncidentStatus.UNDER_REVIEW,
+            IncidentStatus.MORE_INFO_REQUIRED,
+        }
+        open_incidents = (
+            db.query(Incident)
+            .filter(Incident.farm_id == farm_id, Incident.status.in_(open_statuses))
+            .all()
+        )
+        open_ids = {incident.id for incident in open_incidents}
+
+        active_factors = (
+            db.query(RiskFactor)
+            .filter(
+                RiskFactor.farm_id == farm_id,
+                RiskFactor.is_active.is_(True),
+                RiskFactor.category == RiskFactorCategory.INCIDENT,
+            )
+            .all()
+        )
+
+        seen_incident_ids: set[str] = set()
+        for factor in active_factors:
+            incident_id = RiskEngine.extract_incident_id(factor)
+            if incident_id:
+                if incident_id not in open_ids:
+                    factor.is_active = False
+                elif incident_id in seen_incident_ids:
+                    factor.is_active = False
+                else:
+                    seen_incident_ids.add(incident_id)
+                continue
+
+            if not open_incidents:
+                factor.is_active = False
+
+        db.flush()
+
+    @staticmethod
+    def extract_incident_id(factor: RiskFactor) -> str | None:
+        if factor.description and "|ref:" in factor.description:
+            start = factor.description.find("|ref:") + len("|ref:")
+            end = factor.description.find("|", start)
+            if end == -1:
+                end = len(factor.description)
+            incident_id = factor.description[start:end].strip()
+            return incident_id or None
+        if factor.label.startswith("Incident [") and "]:" in factor.label:
+            return factor.label.split("[", 1)[1].split("]", 1)[0]
+        return None
+
     @staticmethod
     def recalculate_farm(db: Session, farm: Farm) -> int:
         """Recalculate score from passport baseline minus active risk penalties. Returns old score."""
@@ -203,25 +260,23 @@ class RiskEngine:
                         RiskFactor.farm_id == farm_id,
                         RiskFactor.is_active.is_(True),
                         RiskFactor.label == legacy_label,
-                        RiskFactor.category == RiskFactorCategory.INCIDENT,
+                        RiskFactor.description.contains(RiskEngine.incident_factor_ref(incident_id)),
                     )
-                    .order_by(RiskFactor.created_at.desc())
-                    .limit(1)
                     .all()
                 )
-        if not factors:
-            factors = (
-                db.query(RiskFactor)
-                .filter(
-                    RiskFactor.farm_id == farm_id,
-                    RiskFactor.is_active.is_(True),
-                    RiskFactor.category == RiskFactorCategory.INCIDENT,
-                    RiskFactor.label.like("Incident [%"),
-                )
-                .order_by(RiskFactor.created_at.desc())
-                .limit(1)
-                .all()
-            )
+                if not factors:
+                    factors = (
+                        db.query(RiskFactor)
+                        .filter(
+                            RiskFactor.farm_id == farm_id,
+                            RiskFactor.is_active.is_(True),
+                            RiskFactor.label == legacy_label,
+                            RiskFactor.category == RiskFactorCategory.INCIDENT,
+                        )
+                        .order_by(RiskFactor.created_at.desc())
+                        .limit(1)
+                        .all()
+                    )
         for factor in factors:
             factor.is_active = False
         db.flush()

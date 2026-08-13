@@ -256,8 +256,17 @@ class InspectionService:
         return inspection
 
     @staticmethod
-    def list_inspections(db: Session, farm_id: str | None = None) -> list[Inspection]:
-        query = db.query(Inspection).order_by(Inspection.scheduled_at.desc())
+    def list_inspections(
+        db: Session,
+        farm_id: str | None = None,
+        district_id: str | None = None,
+        status: InspectionStatus | None = None,
+    ) -> list[Inspection]:
+        query = db.query(Inspection).join(Farm, Farm.id == Inspection.farm_id)
         if farm_id:
             query = query.filter(Inspection.farm_id == farm_id)
-        return query.all()
+        if district_id:
+            query = query.filter(Farm.district_id == district_id)
+        if status:
+            query = query.filter(Inspection.status == status)
+        return query.order_by(Inspection.scheduled_at.desc()).all()

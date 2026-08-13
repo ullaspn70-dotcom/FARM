@@ -147,7 +147,13 @@ class IncidentService:
         else:
             raise ValidationAppError("Invalid verification action.")
 
-        if action != "reject":
+        if action == "validate":
+            farm = incident.farm
+            old_score = RiskEngine.recalculate_farm(db, farm)
+            RiskEngine.update_farm_counters(db, farm)
+            if farm.biosecurity_score != old_score:
+                RiskEngine.notify_score_change(db, farm, old_score)
+        elif action != "reject":
             farm = incident.farm
             RiskEngine.update_farm_counters(db, farm)
 

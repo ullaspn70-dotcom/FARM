@@ -3,6 +3,7 @@ import { Landmark, MapPin, ArrowRight } from "lucide-react";
 import type { OfficerStats } from "../../types";
 import { officerService } from "../../services/api";
 import { InspectionPriorityPanel } from "./InspectionPriorityPanel";
+import { ScheduledInspectionsPanel } from "./ScheduledInspectionsPanel";
 
 interface OfficerDashboardProps {
   onNavigateToGis: () => void;
@@ -11,6 +12,7 @@ interface OfficerDashboardProps {
 export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({ onNavigateToGis }) => {
   const [stats, setStats] = useState<OfficerStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [inspectionRefreshKey, setInspectionRefreshKey] = useState(0);
 
   const loadStats = () => {
     setLoading(true);
@@ -21,6 +23,11 @@ export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({ onNavigateTo
       })
       .catch(() => setStats(null))
       .finally(() => setLoading(false));
+  };
+
+  const handleScheduleSuccess = () => {
+    loadStats();
+    setInspectionRefreshKey((key) => key + 1);
   };
 
   useEffect(() => {
@@ -103,7 +110,11 @@ export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({ onNavigateTo
 
       <div className="officer-main-grid">
         <div className="priority-list-card priority-list-full">
-          <InspectionPriorityPanel onScheduleSuccess={loadStats} />
+          <ScheduledInspectionsPanel refreshKey={inspectionRefreshKey} />
+        </div>
+
+        <div className="priority-list-card priority-list-full">
+          <InspectionPriorityPanel onScheduleSuccess={handleScheduleSuccess} />
         </div>
 
         {stats && (

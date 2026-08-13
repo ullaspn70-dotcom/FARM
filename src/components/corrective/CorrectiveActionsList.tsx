@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Upload, Calendar, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import type { CorrectiveAction } from "../../types";
-import { correctiveActionService } from "../../services/api";
+import { correctiveActionService, riskService } from "../../services/api";
 import { StatusBadge } from "../common/StatusBadge";
 import { EvidenceUploadModal } from "./EvidenceUploadModal";
 import { CorrectiveActionTraceability } from "./CorrectiveActionTraceability";
@@ -42,9 +42,14 @@ export const CorrectiveActionsList: React.FC = () => {
   }, [role, activeFarm.id]);
 
   const handleVerify = async (actionId: string, approve: boolean) => {
-    await correctiveActionService.verifyAction(actionId, approve);
-    await fetchActions();
-    await refreshFarms();
+    try {
+      await correctiveActionService.verifyAction(actionId, approve);
+      await riskService.recalculateFarm(activeFarm.id).catch(() => undefined);
+      await fetchActions();
+      await refreshFarms();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("actions.error"));
+    }
   };
 
   return (

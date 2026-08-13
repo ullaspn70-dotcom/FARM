@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Stethoscope, CheckCircle, HelpCircle, XCircle, MapPin } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import type { IncidentReport } from "../../types";
-import { incidentService } from "../../services/api";
+import { incidentService, riskService } from "../../services/api";
 import { StatusBadge } from "../common/StatusBadge";
 import { EvidencePreview } from "../common/EvidencePreview";
 
@@ -57,6 +57,7 @@ export const VetDashboard: React.FC = () => {
           : "Incident rejected and marked as non-critical."
       );
       await fetchIncidents();
+      await riskService.recalculateFarm(selectedIncident.farmId).catch(() => undefined);
       await refreshFarms();
     } catch (err) {
       console.error(err);

@@ -246,6 +246,12 @@ const en: TranslationDictionary = {
   "officer.detail.error": "Could not load full farm record. Showing basic info.",
   "officer.detail.clickHint": "Click a farm card to view its registered record",
 
+  "officer.scheduled.title": "Scheduled Inspections",
+  "officer.scheduled.subtitle": "Upcoming field visits in your district",
+  "officer.scheduled.empty": "No scheduled inspections yet. Use Schedule Inspection on a farm below.",
+  "officer.scheduled.date": "Inspection date",
+  "officer.scheduled.officer": "Officer",
+
   "vet.evidence.open": "Open evidence file",
   "vet.evidence.unavailable": "File URL unavailable — re-upload may be required.",
   "vet.evidence.reloadHint": "Preview failed — click Open evidence file (upload a new photo if link is old).",

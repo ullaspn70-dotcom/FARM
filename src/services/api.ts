@@ -11,6 +11,7 @@ import type {
   ChecklistItem,
   RiskSummary,
   SpatialRiskResponse,
+  ScheduledInspection,
 } from "../types";
 
 const PRODUCTION_API = "https://agrisentinel-api.onrender.com";
@@ -209,6 +210,12 @@ export const riskService = {
   async getRiskSummary(farmId: string): Promise<RiskSummary> {
     return apiFetch<RiskSummary>(`/risk/farms/${farmId}/summary`);
   },
+
+  async recalculateFarm(farmId: string): Promise<RiskSummary> {
+    return apiFetch<RiskSummary>(`/risk/farms/${farmId}/recalculate`, {
+      method: "POST",
+    });
+  },
 };
 
 export const gisService = {
@@ -234,6 +241,10 @@ export const officerService = {
 
   async getInspectionPriority(): Promise<Farm[]> {
     return apiFetch<Farm[]>("/officer/inspection-priority");
+  },
+
+  async getScheduledInspections(): Promise<ScheduledInspection[]> {
+    return apiFetch<ScheduledInspection[]>("/officer/inspections");
   },
 
   async scheduleInspection(

@@ -25,6 +25,7 @@ class InspectionCreate(CamelModel):
 class InspectionResponse(CamelModel):
     id: str
     farm_id: str = Field(serialization_alias="farmId")
+    farm_name: str | None = Field(default=None, serialization_alias="farmName")
     status: str
     scheduled_at: str = Field(serialization_alias="scheduledAt")
     inspector_name: str | None = Field(default=None, serialization_alias="inspectorName")

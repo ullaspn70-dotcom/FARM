@@ -207,6 +207,16 @@ export interface OfficerStats {
   openCorrectiveActions: number;
 }
 
+export interface ScheduledInspection {
+  id: string;
+  farmId: string;
+  farmName?: string;
+  status: string;
+  scheduledAt: string;
+  inspectorName?: string;
+  notes?: string;
+}
+
 export interface NotificationItem {
   id: string;
   title: string;

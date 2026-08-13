@@ -73,7 +73,8 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
   const [filterAction, setFilterAction] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("priority");
 
-  useEffect(() => {
+  const loadPanelData = () => {
+    setLoading(true);
     Promise.all([
       officerService.getInspectionPriority(),
       correctiveActionService.getActions(),
@@ -88,6 +89,10 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
         setFarms([]);
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadPanelData();
   }, []);
 
   const enrichedFarms = useMemo(() => {
@@ -244,7 +249,10 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
         farm={scheduleFarm}
         isOpen={!!scheduleFarm}
         onClose={() => setScheduleFarm(null)}
-        onScheduled={onScheduleSuccess}
+        onScheduled={() => {
+          loadPanelData();
+          onScheduleSuccess?.();
+        }}
       />
       <OfficerFarmDetailModal
         farm={detailFarm}
