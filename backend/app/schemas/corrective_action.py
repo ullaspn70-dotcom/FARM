@@ -35,6 +35,11 @@ class EvidenceAnalysisResponse(CamelModel):
     observations: list[str]
     recommended_actions: list[dict] = Field(serialization_alias="recommendedActions")
     analysis_method: str = Field(serialization_alias="analysisMethod")
+    relevance_level: str = Field(default="uncertain", serialization_alias="relevanceLevel")
+    relevance_score: int = Field(default=0, serialization_alias="relevanceScore")
+    farm_related: bool = Field(default=False, serialization_alias="farmRelated")
+    image_assessment: dict | None = Field(default=None, serialization_alias="imageAssessment")
+    completeness: str | None = None
     disclaimer: str
 
 

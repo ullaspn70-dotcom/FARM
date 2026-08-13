@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     STORAGE_BASE_URL: str = "http://localhost:8000/uploads"
     PUBLIC_API_URL: str = ""
 
+    OPENAI_API_KEY: str = ""
+    OPENAI_VISION_MODEL: str = "gpt-4o-mini"
+
     DEFAULT_DISTRICT_ID: str = "district-ranchi"
 
     API_V1_PREFIX: str = "/api/v1"

@@ -91,7 +91,7 @@ def action_to_response(
     if include_analysis and action.evidence:
         from app.services.evidence_analysis_service import EvidenceAnalysisService
 
-        evidence_analysis = EvidenceAnalysisService.analyze(action, action.evidence)
+        evidence_analysis = EvidenceAnalysisService.analyze(db, action, action.evidence)
 
     source = "veterinary_action_plan" if VET_PLAN_MARKER in (action.description or "") else "general"
 

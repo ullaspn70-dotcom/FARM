@@ -147,6 +147,15 @@ export interface EvidenceAnalysis {
   analysisMethod: string;
   disclaimer: string;
   completeness?: "missing" | "partial" | "good";
+  relevanceLevel?: "aligned" | "uncertain" | "unrelated" | "missing";
+  relevanceScore?: number;
+  farmRelated?: boolean;
+  imageAssessment?: {
+    validImage?: boolean;
+    width?: number;
+    height?: number;
+    likelyUnrelatedVisual?: boolean;
+  };
 }
 
 export interface RiskSummary {

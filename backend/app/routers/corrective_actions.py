@@ -124,7 +124,7 @@ def analyze_evidence(
     action = CorrectiveActionService.get_action(db, action_id, current_user)
     if not action.evidence:
         raise ValidationAppError("No evidence submitted for this action.")
-    result = EvidenceAnalysisService.analyze(action, action.evidence)
+    result = EvidenceAnalysisService.analyze(db, action, action.evidence)
     return EvidenceAnalysisResponse(**result)
 
 

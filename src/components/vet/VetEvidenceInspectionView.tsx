@@ -6,7 +6,7 @@ import { EvidencePreview } from "../common/EvidencePreview";
 import { StatusBadge } from "../common/StatusBadge";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
-import { analyzeEvidenceLocally, isVeterinaryActionPlan, stripVetPlanMarker } from "../../utils/evidenceAnalysis";
+import { analyzeEvidenceLocally, isVeterinaryActionPlan, relevanceBadge, stripVetPlanMarker } from "../../utils/evidenceAnalysis";
 
 const AWAITING_STATUSES = new Set(["Evidence Submitted", "Awaiting Verification"]);
 
@@ -284,15 +284,27 @@ export const VetEvidenceInspectionView: React.FC = () => {
                   <div className="ai-analysis-header">
                     <Brain size={20} />
                     <h4 className="section-title">Aarohi AI Evidence Analysis</h4>
+                    {analysis && (
+                      <span className={`ai-relevance-badge ${relevanceBadge(analysis.relevanceLevel).className}`}>
+                        {relevanceBadge(analysis.relevanceLevel).label}
+                        {analysis.relevanceScore != null ? ` (${analysis.relevanceScore}/100)` : ""}
+                      </span>
+                    )}
                     {analysis?.analysisMethod && (
                       <span className="ai-method-badge">{analysis.analysisMethod}</span>
                     )}
                   </div>
                   {analysisLoading ? (
-                    <p className="text-muted">Analyzing image and problem description…</p>
+                    <p className="text-muted">Analyzing image pixels and problem description…</p>
                   ) : analysis ? (
                     <>
                       <p className="ai-analysis-summary">{analysis.summary}</p>
+                      {analysis.relevanceLevel === "unrelated" && (
+                        <div className="ai-reject-hint">
+                          This upload does not appear to show farm corrective work. Recommended: reject and
+                          ask the farmer for a photo of the actual completed action.
+                        </div>
+                      )}
                       <div className="ai-observations">
                         <span className="label">Observations</span>
                         <ul>
