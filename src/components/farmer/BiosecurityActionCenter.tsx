@@ -10,6 +10,7 @@ import {
 } from "../../hooks/useActionCenterData";
 import { StatusBadge } from "../common/StatusBadge";
 import { translateContent } from "../../i18n/contentTranslate";
+import { translateData } from "../../i18n/dataTranslations";
 import { ScoreTrendChart } from "./ScoreTrendChart";
 
 interface BiosecurityActionCenterProps {
@@ -22,7 +23,7 @@ export const BiosecurityActionCenter: React.FC<BiosecurityActionCenterProps> = (
   onNavigateToActions,
 }) => {
   const { activeFarm, role } = useAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { farm, summary, history, checklist, incidents, actions, notifications, loading, error } =
     useActionCenterData(activeFarm.id, role);
 
@@ -41,7 +42,7 @@ export const BiosecurityActionCenter: React.FC<BiosecurityActionCenterProps> = (
       <div className="action-center-header">
         <div>
           <span className="eyebrow-text">{t("actionCenter.title")}</span>
-          <h2 className="view-title">{displayFarm.name}</h2>
+          <h2 className="view-title">{translateData(displayFarm.name, locale)}</h2>
           <p className="view-subtitle">{t("actionCenter.subtitle")}</p>
         </div>
         <StatusBadge type="risk" value={summary?.riskLevel ?? displayFarm.riskLevel} size="lg" />
@@ -112,7 +113,9 @@ export const BiosecurityActionCenter: React.FC<BiosecurityActionCenterProps> = (
                   <div>
                     <strong>{translateContent(act.title, t)}</strong>
                     <span className={`priority-badge priority-${act.priority}`}>
-                      {t(`actionCenter.priority.${act.priority.toLowerCase() as "high" | "medium" | "low"}`)}
+                      {t(
+                        `actionCenter.priority.${act.priority.toLowerCase() as "urgent" | "high" | "medium" | "low"}`
+                      )}
                     </span>
                   </div>
                   <StatusBadge type="action" value={act.status} size="sm" />
@@ -134,7 +137,7 @@ export const BiosecurityActionCenter: React.FC<BiosecurityActionCenterProps> = (
           <h3>{t("actionCenter.nextAction")}</h3>
           {nextAction ? (
             <>
-              <p className="ac-next-desc">{nextAction.title}</p>
+              <p className="ac-next-desc">{translateContent(nextAction.title, t)}</p>
               <p className="ac-next-deadline">{nextAction.deadline}</p>
               {role === "farmer" && (
                 <button
@@ -162,8 +165,8 @@ export const BiosecurityActionCenter: React.FC<BiosecurityActionCenterProps> = (
             <ul className="ac-alerts-list">
               {notifications.map((n) => (
                 <li key={n.id} className={n.read ? "" : "unread"}>
-                  <strong>{n.title}</strong>
-                  <span>{n.message}</span>
+                  <strong>{translateContent(n.title, t)}</strong>
+                  <span>{translateContent(n.message, t)}</span>
                 </li>
               ))}
             </ul>

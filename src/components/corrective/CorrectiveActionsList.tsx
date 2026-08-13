@@ -8,10 +8,11 @@ import { CorrectiveActionTraceability } from "./CorrectiveActionTraceability";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LocaleContext";
 import { translateContent } from "../../i18n/contentTranslate";
+import { translateData } from "../../i18n/dataTranslations";
 
 export const CorrectiveActionsList: React.FC = () => {
   const { role, activeFarm } = useAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [actions, setActions] = useState<CorrectiveAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -88,8 +89,10 @@ export const CorrectiveActionsList: React.FC = () => {
                   <tr>
                     <td className="cell-main-info">
                       <strong className="action-item-title">{translateContent(act.title, t)}</strong>
-                      <p className="action-item-desc">{act.description}</p>
-                      <span className="farm-tag-sub">{t("actions.farmTag")}: {act.farmName}</span>
+                      <p className="action-item-desc">{translateContent(act.description, t)}</p>
+                      <span className="farm-tag-sub">
+                        {t("actions.farmTag")}: {translateData(act.farmName, locale)}
+                      </span>
                       <button
                         type="button"
                         className="btn-trace-toggle"
@@ -101,10 +104,12 @@ export const CorrectiveActionsList: React.FC = () => {
                     </td>
                     <td>
                       <span className={`priority-badge priority-${act.priority}`}>
-                        {t(`actionCenter.priority.${act.priority.toLowerCase() as "high" | "medium" | "low"}`)}
+                        {t(
+                          `actionCenter.priority.${act.priority.toLowerCase() as "urgent" | "high" | "medium" | "low"}`
+                        )}
                       </span>
                     </td>
-                    <td className="cell-person">{act.assignedPerson}</td>
+                    <td className="cell-person">{translateData(act.assignedPerson, locale)}</td>
                     <td className="cell-date">
                       <Calendar size={14} className="inline-icon" /> {act.deadline}
                     </td>

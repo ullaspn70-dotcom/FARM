@@ -108,21 +108,21 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
 
   const riskKey = activeFarm.riskLevel === "safe" ? "safe" : activeFarm.riskLevel === "caution" ? "caution" : "critical";
 
-  const advisorTitle =
-    topRiskFactor?.label ??
-    (activeFarm.riskLevel === "critical"
-      ? t("dashboard.advisor.urgent")
-      : activeFarm.riskLevel === "caution"
-      ? t("dashboard.advisor.review")
-      : t("dashboard.advisor.update"));
+  const advisorTitle = topRiskFactor?.label
+    ? translateContent(topRiskFactor.label, t)
+    : activeFarm.riskLevel === "critical"
+    ? t("dashboard.advisor.urgent")
+    : activeFarm.riskLevel === "caution"
+    ? t("dashboard.advisor.review")
+    : t("dashboard.advisor.update");
 
-  const advisorMessage =
-    topRiskFactor?.description ??
-    (activeFarm.riskLevel === "safe"
-      ? t("dashboard.advisor.safe")
-      : activeFarm.riskLevel === "caution"
-      ? t("dashboard.advisor.caution")
-      : t("dashboard.advisor.critical"));
+  const advisorMessage = topRiskFactor?.description
+    ? translateContent(topRiskFactor.description, t)
+    : activeFarm.riskLevel === "safe"
+    ? t("dashboard.advisor.safe")
+    : activeFarm.riskLevel === "caution"
+    ? t("dashboard.advisor.caution")
+    : t("dashboard.advisor.critical");
 
   const animalLabel =
     activeFarm.farmType === "poultry" ? t("common.birds") : t("common.pigs");
@@ -337,9 +337,13 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                         })}
                       </span>
                     </div>
-                    <p className="timeline-desc">{incident.description}</p>
+                    <p className="timeline-desc">
+                      {translateContent(incident.description, t)}
+                    </p>
                     <span className="zone-tag">
-                      {t("dashboard.location")}: {incident.location}
+                      {t("dashboard.location")}:{" "}
+                      {translateContent(incident.location, t) ||
+                        translateData(incident.location, locale)}
                     </span>
                   </div>
                 </div>

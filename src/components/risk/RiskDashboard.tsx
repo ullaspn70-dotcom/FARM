@@ -2,6 +2,7 @@ import React from "react";
 import { Info } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LocaleContext";
+import { translateData } from "../../i18n/dataTranslations";
 import { StatusBadge } from "../common/StatusBadge";
 import { ScoreHistoryPanel } from "../farmer/ScoreHistoryPanel";
 
@@ -14,7 +15,7 @@ function riskLabel(level: string, t: (k: string) => string): string {
 
 export const RiskDashboard: React.FC = () => {
   const { activeFarm } = useAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   return (
     <div className="risk-dashboard-view">
@@ -23,8 +24,12 @@ export const RiskDashboard: React.FC = () => {
           <span className="eyebrow-text">{t("risk.eyebrow")}</span>
           <h2 className="view-title">{t("risk.title")}</h2>
           <p className="view-subtitle">
-            {t("risk.farmLabel")}: <strong>{activeFarm.name}</strong> ({activeFarm.id}) • {t("risk.typeLabel")}:{" "}
-            <strong>{activeFarm.farmType.toUpperCase()}</strong>
+            {t("risk.farmLabel")}: <strong>{translateData(activeFarm.name, locale)}</strong> ({activeFarm.id}) • {t("risk.typeLabel")}:{" "}
+            <strong>{activeFarm.farmType === "poultry"
+              ? t("status.farmType.poultry")
+              : activeFarm.farmType === "pig"
+              ? t("status.farmType.pig")
+              : t("status.farmType.mixed")}</strong>
           </p>
         </div>
         <StatusBadge type="risk" value={activeFarm.riskLevel} size="lg" />

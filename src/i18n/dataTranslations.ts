@@ -271,6 +271,13 @@ const DATA_TRANSLATIONS: Record<LocaleCode, Record<string, string>> = {
 
     "Chittoor": "चित्तूर",
     "Guntur": "गुंटूर",
+
+    "Khunti": "खुnti",
+    "Ramgarh": "रामगढ़",
+    "West Godavari": "पश्चिम गोदावरी",
+
+    "Block B, Sector 4, Ranchi District, JH":
+      "ब्लॉक B, सेक्टर 4, रांची जिला, JH",
   },
 
   kn: {
@@ -297,6 +304,13 @@ const DATA_TRANSLATIONS: Record<LocaleCode, Record<string, string>> = {
 
     "Chittoor": "ಚಿತ್ತೂರು",
     "Guntur": "ಗುಂಟೂರು",
+
+    "Khunti": "ಖುಂಟಿ",
+    "Ramgarh": "ರಾಮಗarh",
+    "West Godavari": "ಪಶ್ಚಿಮ ಗೋದಾವರಿ",
+
+    "Block B, Sector 4, Ranchi District, JH":
+      "ಬ್ಲಾಕ್ B, ಸೆಕ್ಟರ್ 4, ರಾಂಚಿ ಜಿಲ್ಲೆ, JH",
   },
 
   ml: {
@@ -323,6 +337,13 @@ const DATA_TRANSLATIONS: Record<LocaleCode, Record<string, string>> = {
 
     "Chittoor": "ചിറ്റൂർ",
     "Guntur": "ഗുണ്ടൂർ",
+
+    "Khunti": "ഖunti",
+    "Ramgarh": "രാമgarh",
+    "West Godavari": "വെസ്റ്റ് ഗോദാവരി",
+
+    "Block B, Sector 4, Ranchi District, JH":
+      "ബ്ലോക്ക് B, സെക്ടർ 4, റാഞ്ചി ജില്ല, JH",
   },
 
   ta: {
@@ -349,6 +370,13 @@ const DATA_TRANSLATIONS: Record<LocaleCode, Record<string, string>> = {
 
     "Chittoor": "சித்தூர்",
     "Guntur": "குண்டூர்",
+
+    "Khunti": "கhuntti",
+    "Ramgarh": "ராamgarh",
+    "West Godavari": "மேற்கு கோதாவரி",
+
+    "Block B, Sector 4, Ranchi District, JH":
+      "பிளாக் B, செகtor 4, ராanchi மாவட்டம், JH",
   },
 
   te: {
@@ -375,6 +403,13 @@ const DATA_TRANSLATIONS: Record<LocaleCode, Record<string, string>> = {
 
     "Chittoor": "చిత్తూరు",
     "Guntur": "గుంటూరు",
+
+    "Khunti": "ఖunti",
+    "Ramgarh": "రామgarh",
+    "West Godavari": "పశ్చిమ గోదావరి",
+
+    "Block B, Sector 4, Ranchi District, JH":
+      "బ్లాక్ B, సెక్టర్ 4, రాంచీ జిల్లా, JH",
   },
 };
 

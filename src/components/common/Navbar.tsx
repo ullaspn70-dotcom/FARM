@@ -3,6 +3,7 @@ import { ShieldCheck, Bell, UserCheck, Stethoscope, Landmark, Menu } from "lucid
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
 import { useTranslation } from "../../context/LocaleContext";
+import { translateData } from "../../i18n/dataTranslations";
 import { LanguageSelector } from "./LanguageSelector";
 
 interface NavbarProps {
@@ -12,7 +13,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
   const { role, setRole, activeFarm, setActiveFarm, allFarms } = useAuth();
   const { unreadCount, setIsDrawerOpen } = useNotifications();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   return (
     <header className="bioshield-navbar">
@@ -81,7 +82,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
             >
               {allFarms.map((farm) => (
                 <option key={farm.id} value={farm.id}>
-                  {farm.name} — {farm.location} ({farm.farmType.toUpperCase()})
+                  {translateData(farm.name, locale)} — {translateData(farm.location, locale)} (
+                  {farm.farmType === "poultry"
+                    ? t("status.farmType.poultry")
+                    : farm.farmType === "pig"
+                    ? t("status.farmType.pig")
+                    : t("status.farmType.mixed")}
+                  )
                 </option>
               ))}
             </select>

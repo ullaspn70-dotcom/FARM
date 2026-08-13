@@ -4,6 +4,8 @@ import type { CorrectiveAction } from "../../types";
 import { correctiveActionService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LocaleContext";
+import { translateContent } from "../../i18n/contentTranslate";
+import { translateData } from "../../i18n/dataTranslations";
 
 interface EvidenceUploadModalProps {
   action: CorrectiveAction | null;
@@ -19,7 +21,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
   onSubmitted,
 }) => {
   const { activeFarm } = useAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
@@ -28,12 +30,29 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const localeTag =
+    locale === "hi"
+      ? "hi-IN"
+      : locale === "kn"
+      ? "kn-IN"
+      : locale === "ml"
+      ? "ml-IN"
+      : locale === "ta"
+      ? "ta-IN"
+      : locale === "te"
+      ? "te-IN"
+      : "en-IN";
+
   const locationTag = activeFarm.coordinates
-    ? `Lat: ${activeFarm.coordinates.lat}° N, Long: ${activeFarm.coordinates.lng}° E (${activeFarm.name})`
-    : `${activeFarm.location} (${activeFarm.name})`;
+    ? t("evidence.gpsCoords", {
+        lat: activeFarm.coordinates.lat,
+        lng: activeFarm.coordinates.lng,
+        farm: translateData(activeFarm.name, locale),
+      })
+    : `${translateData(activeFarm.location, locale)} (${translateData(activeFarm.name, locale)})`;
 
   const [timestamp] = useState(
-    new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST"
+    `${new Date().toLocaleString(localeTag, { timeZone: "Asia/Kolkata" })} ${t("common.timezone")}`
   );
 
   useEffect(() => {
@@ -97,8 +116,10 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
         </div>
 
         <div className="action-summary-box">
-          <strong className="action-title-text">{action.title}</strong>
-          <p className="action-farm-sub">{t("actions.farmTag")}: {action.farmName} • ID: {action.id}</p>
+          <strong className="action-title-text">{translateContent(action.title, t)}</strong>
+          <p className="action-farm-sub">
+            {t("actions.farmTag")}: {translateData(action.farmName, locale)} • {t("common.farmId")}: {action.id}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="evidence-form-body">

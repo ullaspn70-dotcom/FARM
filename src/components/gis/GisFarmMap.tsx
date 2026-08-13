@@ -3,6 +3,8 @@ import { MapPin, Filter, Info, Phone, User, Calendar, ExternalLink, AlertTriangl
 import type { GisMapNode, FarmType, RiskLevel, SpatialRiskResponse, IncidentReport } from "../../types";
 import { gisService, incidentService } from "../../services/api";
 import { useTranslation } from "../../context/LocaleContext";
+import { translateContent } from "../../i18n/contentTranslate";
+import { translateData } from "../../i18n/dataTranslations";
 import { StatusBadge } from "../common/StatusBadge";
 
 interface GisFarmMapProps {
@@ -24,7 +26,7 @@ function riskEmoji(level: RiskLevel): string {
 }
 
 export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNavigateToRisk }) => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [nodes, setNodes] = useState<GisMapNode[]>([]);
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [spatialRisk, setSpatialRisk] = useState<SpatialRiskResponse | null>(null);
@@ -66,8 +68,8 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
     <div className="gis-map-view">
       <div className="gis-header-card">
         <div>
-          <span className="eyebrow-text">GEOGRAPHIC INFORMATION SYSTEM (GIS)</span>
-          <h2 className="view-title">Regional Biosecurity Telemetry Map</h2>
+          <span className="eyebrow-text">{t("gis.eyebrow")}</span>
+          <h2 className="view-title">{t("gis.title")}</h2>
         </div>
 
         <div className="gis-filter-bar">
@@ -94,9 +96,9 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
               className="filter-select"
             >
               <option value="all">{t("gis.allRisks")}</option>
-              <option value="safe">Low</option>
-              <option value="caution">Medium</option>
-              <option value="critical">High</option>
+              <option value="safe">{t("gis.riskLow")}</option>
+              <option value="caution">{t("gis.riskMedium")}</option>
+              <option value="critical">{t("gis.riskHigh")}</option>
             </select>
           </div>
         </div>
@@ -132,7 +134,7 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
                     </span>
                   </div>
                   <span className="marker-tooltip marker-tooltip-named">
-                    {node.name}
+                    {translateData(node.name, locale)}
                     <br />
                     <small>{node.id} • {node.score}/100</small>
                   </span>
@@ -150,7 +152,7 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
                   key={inc.id}
                   className="map-incident-marker"
                   style={{ top: `${topPct}%`, left: `${leftPct}%` }}
-                  title={`${t("gis.incidentMarker")}: ${inc.incidentType}`}
+                  title={`${t("gis.incidentMarker")}: ${translateContent(inc.incidentType, t)}`}
                 >
                   <span className="incident-icon">🚨</span>
                 </div>
@@ -170,8 +172,8 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
             <div className="gis-map-legend">
               <span className="legend-item"><span className="legend-emoji">🐔</span> {t("gis.poultry")}</span>
               <span className="legend-item"><span className="legend-emoji">🐷</span> {t("gis.pig")}</span>
-              <span className="legend-item"><span className="legend-dot green" /> Low Risk</span>
-              <span className="legend-item"><span className="legend-dot red" /> High Risk</span>
+              <span className="legend-item"><span className="legend-dot green" /> {t("gis.legendLowRisk")}</span>
+              <span className="legend-item"><span className="legend-dot red" /> {t("gis.legendHighRisk")}</span>
               <span className="legend-item"><span className="legend-emoji">🚨</span> {t("gis.incidentMarker")}</span>
             </div>
           </div>
@@ -181,9 +183,14 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
           <div className="gis-detail-panel">
             <div className="panel-header">
               <span className="node-type-tag">
-                {farmTypeIcon(selectedNode.farmType)} {selectedNode.farmType.toUpperCase()}
+                {farmTypeIcon(selectedNode.farmType)}{" "}
+                {selectedNode.farmType === "poultry"
+                  ? t("status.farmType.poultry")
+                  : selectedNode.farmType === "pig"
+                  ? t("status.farmType.pig")
+                  : t("status.farmType.mixed")}
               </span>
-              <h3 className="node-name">{selectedNode.name}</h3>
+              <h3 className="node-name">{translateData(selectedNode.name, locale)}</h3>
               <span className="node-id-sub">{t("common.farmId")}: {selectedNode.id}</span>
               <StatusBadge type="risk" value={selectedNode.riskLevel} size="sm" />
             </div>
@@ -205,21 +212,21 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
               <div className="detail-row">
                 <User size={16} className="icon-sub" />
                 <div>
-                  <span className="label">Owner</span>
-                  <strong>{selectedNode.owner}</strong>
+                  <span className="label">{t("gis.owner")}</span>
+                  <strong>{translateData(selectedNode.owner, locale)}</strong>
                 </div>
               </div>
               <div className="detail-row">
                 <Phone size={16} className="icon-sub" />
                 <div>
-                  <span className="label">Contact</span>
+                  <span className="label">{t("gis.contact")}</span>
                   <strong>{selectedNode.contact}</strong>
                 </div>
               </div>
               <div className="detail-row">
                 <MapPin size={16} className="icon-sub" />
                 <div>
-                  <span className="label">GPS</span>
+                  <span className="label">{t("gis.gps")}</span>
                   <strong>{selectedNode.lat.toFixed(4)}° N, {selectedNode.lng.toFixed(4)}° E</strong>
                 </div>
               </div>
@@ -235,7 +242,7 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
             {spatialRisk && (
               <div className="spatial-risk-panel">
                 <h4><AlertTriangle size={16} /> {t("gis.spatialRisk")}</h4>
-                <p className="spatial-context">{spatialRisk.regionalContext}</p>
+                <p className="spatial-context">{translateContent(spatialRisk.regionalContext, t)}</p>
                 <div className="spatial-stat">
                   {t("gis.nearbyIncidents")}: <strong>{spatialRisk.nearbyIncidents}</strong>
                 </div>
@@ -245,7 +252,8 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
                     <ul>
                       {spatialRisk.nearbyHighRiskFarms.map((f) => (
                         <li key={f.id}>
-                          {farmTypeIcon(f.farmType)} {f.name} — {f.score}/100 ({f.distanceKm}km)
+                          {farmTypeIcon(f.farmType)} {translateData(f.name, locale)} — {f.score}/100 (
+                          {t("gis.distanceKm", { distance: f.distanceKm })})
                         </li>
                       ))}
                     </ul>
@@ -273,7 +281,9 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
               <div className="gis-incidents-list">
                 <strong>{t("gis.incidentMarker")} ({farmIncidents.length})</strong>
                 {farmIncidents.slice(0, 3).map((inc) => (
-                  <div key={inc.id} className="gis-incident-item">{inc.incidentType}</div>
+                  <div key={inc.id} className="gis-incident-item">
+                    {translateContent(inc.incidentType, t)}
+                  </div>
                 ))}
               </div>
             )}

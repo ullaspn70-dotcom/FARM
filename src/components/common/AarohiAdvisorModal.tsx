@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { X, Sparkles, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useTranslation } from "../../context/LocaleContext";
+import { translateContent } from "../../i18n/contentTranslate";
+import { translateData } from "../../i18n/dataTranslations";
 import { riskService } from "../../services/api";
 import type { RiskFactor } from "../../types";
 
@@ -9,11 +12,18 @@ interface AarohiAdvisorModalProps {
   onClose: () => void;
 }
 
+function riskLevelLabel(level: string, t: (key: string) => string): string {
+  if (level === "safe") return t("status.risk.safe");
+  if (level === "caution") return t("status.risk.caution");
+  return t("status.risk.critical");
+}
+
 export const AarohiAdvisorModal: React.FC<AarohiAdvisorModalProps> = ({
   isOpen,
   onClose,
 }) => {
   const { activeFarm } = useAuth();
+  const { t, locale } = useTranslation();
   const [factors, setFactors] = useState<RiskFactor[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,24 +44,26 @@ export const AarohiAdvisorModal: React.FC<AarohiAdvisorModalProps> = ({
     (a, b) => Math.abs(b.delta) - Math.abs(a.delta)
   )[0];
 
-  const tips =
-    topFactor
-      ? [
-          `Priority: ${topFactor.label}`,
-          topFactor.description || "Review this risk factor on the Risk Analytics page.",
-          "Complete pending checklist items and corrective actions to improve your score.",
-        ]
-      : activeFarm.riskLevel === "safe"
-      ? [
-          "Your farm biosecurity score is stable.",
-          "Continue daily sanitation and visitor log verification.",
-          "Schedule routine veterinary inspection before the next assessment window.",
-        ]
-      : [
-          "One or more risk indicators need attention.",
-          "Check the corrective actions list and resolve high-priority items.",
-          "Report any new mortality or symptom spikes immediately.",
-        ];
+  const tips = topFactor
+    ? [
+        t("aarohi.tip.priority", {
+          factor: translateContent(topFactor.label, t),
+        }),
+        translateContent(topFactor.description ?? "", t) ||
+          t("aarohi.tip.reviewRisk"),
+        t("aarohi.tip.completeChecklist"),
+      ]
+    : activeFarm.riskLevel === "safe"
+    ? [
+        t("aarohi.tip.stable"),
+        t("aarohi.tip.continueSanitation"),
+        t("aarohi.tip.scheduleInspection"),
+      ]
+    : [
+        t("aarohi.tip.attention"),
+        t("aarohi.tip.checkActions"),
+        t("aarohi.tip.reportMortality"),
+      ];
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -60,11 +72,15 @@ export const AarohiAdvisorModal: React.FC<AarohiAdvisorModalProps> = ({
           <div className="aarohi-modal-title-row">
             <div className="aarohi-avatar-large">A</div>
             <div>
-              <span className="aarohi-eyebrow">AAROHI AI BIOSECURITY ADVISOR</span>
-              <h2 className="modal-title">Farm Guidance for {activeFarm.name}</h2>
+              <span className="aarohi-eyebrow">{t("aarohi.eyebrow")}</span>
+              <h2 className="modal-title">
+                {t("aarohi.title", {
+                  farmName: translateData(activeFarm.name, locale),
+                })}
+              </h2>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose} aria-label="Close">
+          <button className="modal-close-btn" onClick={onClose} aria-label={t("common.close")}>
             <X size={20} />
           </button>
         </div>
@@ -77,12 +93,15 @@ export const AarohiAdvisorModal: React.FC<AarohiAdvisorModalProps> = ({
               <AlertTriangle size={16} />
             )}
             <span>
-              Biosecurity score {activeFarm.biosecurityScore}/100 — {activeFarm.riskLevel} risk
+              {t("aarohi.scoreStatus", {
+                score: activeFarm.biosecurityScore,
+                risk: riskLevelLabel(activeFarm.riskLevel, t),
+              })}
             </span>
           </div>
 
           {loading ? (
-            <p className="text-muted">Analyzing farm telemetry and risk signals...</p>
+            <p className="text-muted">{t("aarohi.loading")}</p>
           ) : (
             <ul className="aarohi-tip-list">
               {tips.map((tip, idx) => (
@@ -94,10 +113,7 @@ export const AarohiAdvisorModal: React.FC<AarohiAdvisorModalProps> = ({
             </ul>
           )}
 
-          <p className="aarohi-disclaimer">
-            Aarohi provides rule-based biosecurity guidance from live farm risk data. Always follow
-            certified veterinary protocols for outbreak decisions.
-          </p>
+          <p className="aarohi-disclaimer">{t("aarohi.disclaimer")}</p>
         </div>
       </div>
     </div>

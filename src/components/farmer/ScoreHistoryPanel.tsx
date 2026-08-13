@@ -144,7 +144,7 @@ export const ScoreHistoryPanel: React.FC = () => {
                       {factor.delta >= 0 ? "+" : ""}
                       {factor.delta} {t("score.points")}
                     </span>
-                    <p>{factor.description}</p>
+                    <p>{translateContent(factor.description ?? "", t)}</p>
                   </li>
                 ))}
               </ul>

@@ -2,6 +2,7 @@ import React from "react";
 import { X, Bell, ShieldAlert, CheckCircle2, Calendar, AlertTriangle } from "lucide-react";
 import { useNotifications } from "../../context/NotificationContext";
 import { useTranslation } from "../../context/LocaleContext";
+import { translateContent } from "../../i18n/contentTranslate";
 
 export const NotificationCenter: React.FC = () => {
   const { notifications, isDrawerOpen, setIsDrawerOpen, markAsRead } = useNotifications();
@@ -32,10 +33,10 @@ export const NotificationCenter: React.FC = () => {
                   <div className={`notif-type-icon type-${n.type}`}>
                     {n.type === "incident" ? <ShieldAlert size={16} /> : n.type === "verification" || n.type === "evidence" ? <CheckCircle2 size={16} /> : n.type === "inspection" ? <Calendar size={16} /> : <AlertTriangle size={16} />}
                   </div>
-                  <strong className="notif-title">{n.title}</strong>
+                  <strong className="notif-title">{translateContent(n.title, t)}</strong>
                   <span className="notif-time">{n.timestamp}</span>
                 </div>
-                <p className="notif-message">{n.message}</p>
+                <p className="notif-message">{translateContent(n.message, t)}</p>
               </div>
             ))
           )}

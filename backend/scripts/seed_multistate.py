@@ -57,6 +57,7 @@ NEW_DISTRICTS = {
     "AP": [
         ("district-ap-chittoor", "Chittoor"),
         ("district-ap-guntur", "Guntur"),
+        ("district-ap-west-godavari", "West Godavari"),
     ],
 }
 

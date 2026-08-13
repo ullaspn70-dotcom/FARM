@@ -15,6 +15,7 @@ import { passportService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LocaleContext";
 import { translateContent } from "../../i18n/contentTranslate";
+import { translateData } from "../../i18n/dataTranslations";
 
 interface BiosecurityPassportModalProps {
   isOpen: boolean;
@@ -37,7 +38,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
   onClose,
 }) => {
   const { activeFarm } = useAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [passport, setPassport] = useState<BiosecurityPassport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -129,14 +130,22 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
               </div>
               <div className="banner-details">
                 <div className="verified-title-row">
-                  <h3>{passport.farmName}</h3>
+                  <h3>{translateData(passport.farmName, locale)}</h3>
                   <span className="status-pill-verified">
                     <CheckCircle size={14} /> {translateContent(passport.complianceStatus, t)}
                   </span>
                 </div>
                 <p className="passport-farm-sub">
-                  Farm ID: <strong>{passport.farmId}</strong> • Type:{" "}
-                  <strong>{passport.farmType.toUpperCase()}</strong> • Issued: {passport.issueDate}
+                  {t("passport.metaLine", {
+                    farmId: passport.farmId,
+                    farmType:
+                      passport.farmType === "poultry"
+                        ? t("status.farmType.poultry")
+                        : passport.farmType === "pig"
+                        ? t("status.farmType.pig")
+                        : t("status.farmType.mixed"),
+                    issueDate: passport.issueDate,
+                  })}
                 </p>
                 <div className="continuous-monitored-tag">
                   <span className="live-dot-green"></span>
@@ -155,7 +164,9 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
                   >
                     <img
                       src={qrDataUrl}
-                      alt={`Scannable QR code for ${passport.farmName}`}
+                      alt={t("passport.qrAlt", {
+                        farmName: translateData(passport.farmName, locale),
+                      })}
                       className="passport-qr-image"
                     />
                     {scanning && <span className="qr-scan-overlay">{t("passport.scanning")}</span>}
@@ -180,7 +191,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
                 <div className="qr-scan-grid">
                   <div className="scan-result-item">
                     <span>{t("passport.farmName")}</span>
-                    <strong>{passport.farmName}</strong>
+                    <strong>{translateData(passport.farmName, locale)}</strong>
                   </div>
                   <div className="scan-result-item">
                     <span>{t("passport.farmId")}</span>
@@ -188,7 +199,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
                   </div>
                   <div className="scan-result-item">
                     <span>{t("passport.owner")}</span>
-                    <strong>{passport.ownerName}</strong>
+                    <strong>{translateData(passport.ownerName, locale)}</strong>
                   </div>
                   <div className="scan-result-item">
                     <span>{t("passport.biosecurityScore")}</span>
@@ -204,7 +215,9 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
                   </div>
                 </div>
                 <p className="qr-scan-note">
-                  {t("passport.scanNote", { location: passport.location })}
+                  {t("passport.scanNote", {
+                    location: translateData(passport.location, locale),
+                  })}
                 </p>
               </div>
             )}
@@ -212,11 +225,11 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
             <div className="passport-info-grid">
               <div className="info-tile">
                 <span className="tile-label">{t("passport.locationSector")}</span>
-                <strong className="tile-value">{passport.location}</strong>
+                <strong className="tile-value">{translateData(passport.location, locale)}</strong>
               </div>
               <div className="info-tile">
                 <span className="tile-label">{t("passport.farmOwner")}</span>
-                <strong className="tile-value">{passport.ownerName}</strong>
+                <strong className="tile-value">{translateData(passport.ownerName, locale)}</strong>
               </div>
               <div className="info-tile">
                 <span className="tile-label">{t("passport.capacity")}</span>
@@ -332,7 +345,7 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
                       </div>
                       <div className="history-details">
                         <strong>{item.inspectorName}</strong>
-                        <p>{item.notes}</p>
+                        <p>{translateContent(item.notes, t)}</p>
                       </div>
                     </div>
                   ))

@@ -3,6 +3,7 @@ import { X, ShieldAlert, Upload, CheckCircle2, MapPin, AlertTriangle } from "luc
 import { incidentService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LocaleContext";
+import { translateContent } from "../../i18n/contentTranslate";
 
 const INCIDENT_TYPES = [
   { value: "Sudden Mortality Increase", key: "incident.type.mortality" },
@@ -42,7 +43,7 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
   const [numberAffected, setNumberAffected] = useState<number>(12);
   const [dateTime, setDateTime] = useState<string>(new Date().toISOString().slice(0, 16));
   const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("Shed 02 - Isolation Pen B");
+  const [location, setLocation] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -116,7 +117,7 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
               {t("incident.successDesc", {
                 type: displayIncidentType,
                 count: numberAffected,
-                location,
+                location: translateContent(location, t),
               })}
             </p>
             <div className="success-note-box">

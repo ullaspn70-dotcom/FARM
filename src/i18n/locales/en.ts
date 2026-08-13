@@ -39,9 +39,12 @@ const en: TranslationDictionary = {
   "common.birds": "birds",
   "common.pigs": "pigs",
   "common.target": "Target",
+  "common.timezone": "IST",
+  "evidence.gpsCoords": "Lat: {{lat}}° N, Long: {{lng}}° E ({{farm}})",
 
   "language.title": "Select Language",
   "language.suggested": "Suggested for your region",
+  "language.auto": "Auto — Farm State",
 
   "dashboard.registeredOwner": "Registered Owner",
   "dashboard.totalPopulation": "Total Population",
@@ -362,6 +365,129 @@ const en: TranslationDictionary = {
   "content.checklist.visitorCheckin": "Visitor digital check-in records verified",
   "content.checklist.shedSanitation": "Shed deep sanitation protocol check",
   "content.checklist.shed02Sanitation": "Shed 02 deep sanitation protocol check",
+
+  "language.english": "English",
+
+  "aarohi.eyebrow": "AAROHI AI BIOSECURITY ADVISOR",
+  "aarohi.title": "Farm Guidance for {{farmName}}",
+  "aarohi.scoreStatus": "Biosecurity score {{score}}/100 — {{risk}} risk",
+  "aarohi.loading": "Analyzing farm telemetry and risk signals...",
+  "aarohi.disclaimer":
+    "Aarohi provides rule-based biosecurity guidance from live farm risk data. Always follow certified veterinary protocols for outbreak decisions.",
+  "aarohi.tip.priority": "Priority: {{factor}}",
+  "aarohi.tip.reviewRisk": "Review this risk factor on the Risk Analytics page.",
+  "aarohi.tip.completeChecklist":
+    "Complete pending checklist items and corrective actions to improve your score.",
+  "aarohi.tip.stable": "Your farm biosecurity score is stable.",
+  "aarohi.tip.continueSanitation": "Continue daily sanitation and visitor log verification.",
+  "aarohi.tip.scheduleInspection":
+    "Schedule routine veterinary inspection before the next assessment window.",
+  "aarohi.tip.attention": "One or more risk indicators need attention.",
+  "aarohi.tip.checkActions": "Check the corrective actions list and resolve high-priority items.",
+  "aarohi.tip.reportMortality": "Report any new mortality or symptom spikes immediately.",
+
+  "gis.eyebrow": "GEOGRAPHIC INFORMATION SYSTEM",
+  "gis.title": "Regional Biosecurity Telemetry Map",
+  "gis.owner": "Owner",
+  "gis.contact": "Contact",
+  "gis.gps": "GPS",
+  "gis.riskLow": "Low",
+  "gis.riskMedium": "Medium",
+  "gis.riskHigh": "High",
+  "gis.legendLowRisk": "Low Risk",
+  "gis.legendHighRisk": "High Risk",
+  "gis.distanceKm": "{{distance}} km",
+
+  "passport.metaLine": "Farm ID: {{farmId}} • Type: {{farmType}} • Issued: {{issueDate}}",
+  "passport.qrAlt": "Scannable QR code for {{farmName}}",
+
+  "actionCenter.priority.urgent": "URGENT",
+
+  "status.verification.unverified": "Unverified",
+  "status.verification.pending": "Verification Pending",
+
+  "notification.newIncident": "New Incident Reported",
+  "notification.evidenceSubmitted": "Evidence Submitted for Verification",
+  "notification.scoreUpdated": "Biosecurity Score Updated",
+  "notification.inspectionScheduled": "Inspection Scheduled",
+  "notification.msg.incidentHighMortality":
+    "High mortality reported at Apex Swine Breeding Center (Ramgarh).",
+  "notification.msg.evidenceBasin":
+    "GreenValley Bio-Farm submitted evidence for ACT-2026-104 (Disinfection Basin Refill).",
+  "notification.msg.scoreIncrease":
+    "GreenValley Bio-Farm biosecurity score increased to 78/100 (+4 points).",
+  "notification.msg.inspectionSunrise":
+    "Routine biosecurity inspection assigned for SunRise Poultry Haven on Aug 14.",
+
+  "content.incident.respiratoryScreening": "Respiratory screening",
+  "content.incident.biosecurityEquipment": "Biosecurity equipment check",
+  "content.incident.feedStorageObservation": "Feed storage observation",
+  "content.incident.equipmentFailure": "Equipment failure",
+  "content.incident.visitorControlObservation": "Visitor control observation",
+  "content.incident.suddenHighMortality": "Sudden High Mortality",
+  "content.incident.feedDiscoloration": "Feed Discoloration & Moisture Breach",
+  "content.incident.syntheticDemo": "Observed health anomaly requiring veterinary inspection.",
+  "content.incident.demoRespiratory":
+    "Routine inspection flagged mild respiratory signs for follow-up.",
+  "content.incident.demoDisinfection":
+    "Entry gate disinfection pressure was below the demonstration threshold.",
+  "content.incident.demoFeedStorage":
+    "Routine observation flagged a minor feed-storage hygiene issue.",
+  "content.incident.demoVehicleWash":
+    "Reduced spray pressure detected at the vehicle disinfection gate.",
+  "content.incident.demoVisitorLog": "Visitor records required a routine completeness check.",
+  "content.incident.swineMortality":
+    "Sudden high fever and respiratory distress in Shed 02 grower pigs. 18 fatalities reported within 24 hours.",
+  "content.incident.feedMoisture":
+    "Slight feed moisture contamination detected in Feed Bin 03 post heavy rainfall.",
+
+  "content.location.shed02Isolation": "Shed 02 - Isolation Ward",
+  "content.location.shed02IsolationPen": "Shed 02 - Isolation Pen B",
+  "content.location.feedStorageShedC": "Feed Storage Shed C",
+  "content.location.isolationArea": "Isolation area",
+  "content.location.mainEntryGate": "Main entry gate",
+  "content.location.feedStorage": "Feed storage",
+  "content.location.vehicleEntry": "Vehicle entry",
+  "content.location.visitorEntry": "Visitor entry",
+
+  "content.action.reviewIsolation": "Review isolation and sanitation procedure",
+  "content.action.verifyDisinfectionGate": "Verify vehicle disinfection gate",
+  "content.action.refreshFeedStorage": "Refresh feed storage sanitation",
+  "content.action.repairDisinfectionGate": "Repair vehicle disinfection gate",
+  "content.action.completeVisitorLog": "Complete visitor log verification",
+  "content.action.sanitizeShed02": "Sanitize & Decontaminate Shed 02 Buffer Area",
+  "content.action.replaceBasinFluid": "Replace Vehicle Disinfection Basin Fluid",
+  "content.action.enforcePerimeter": "Enforce Strict Perimeter Isolation Zone",
+  "content.action.entryGateCheck": "Entry gate biosecurity check completed",
+  "content.action.desc.reviewIsolation":
+    "Review isolation and document sanitation completion.",
+  "content.action.desc.verifyGate": "Inspect and document gate operation.",
+  "content.action.desc.refreshFeed": "Clean storage area and record completion.",
+  "content.action.desc.repairGate": "Service the spray gate and verify pressure.",
+  "content.action.desc.completeVisitor": "Verify and complete the visitor log.",
+  "content.action.desc.sanitizeShed02":
+    "Apply recommended chemical disinfectant solution across Shed 02 entry perimeter and re-verify spray log.",
+  "content.action.desc.replaceBasin":
+    "Flush current disinfection basin at Main Gate and replenish with fresh QAC disinfectant.",
+  "content.action.desc.enforcePerimeter":
+    "Install bio-secure barrier netting along South perimeter fence adjacent to regional road.",
+
+  "content.risk.nearbyIncident": "Nearby incident confirmed in Ramgarh sector",
+  "content.risk.mortalityIncrease": "Mortality rate increase (+3.2% in Shed 02)",
+  "content.risk.shedSanitationDelay": "Shed 02 sanitation check delay",
+  "content.risk.vehicleMovement": "Increased vehicle movement at Entry Gate",
+  "content.risk.desc.nearbyOutbreak": "Swine respiratory outbreak within 15km perimeter.",
+  "content.risk.desc.mortalityBaseline":
+    "Slight elevation above historical 7-day average baseline.",
+  "content.risk.desc.sanitationOverdue": "Sanitation log overdue by 14 hours.",
+  "content.risk.desc.vehicleLog": "4 feed delivery vehicles logged within 3 hours.",
+  "content.risk.demoLabel": "Routine monitoring factor",
+  "content.risk.demoDesc": "Demo risk data for biosecurity visualization.",
+
+  "content.passport.inspectionNotes.passed":
+    "Shed sanitation and perimeter fencing fully compliant. Vehicle dip active.",
+  "content.passport.inspectionNotes.conditional":
+    "Visitor logbook entry was missing digital verification code. Rectified.",
 };
 
 export default en;

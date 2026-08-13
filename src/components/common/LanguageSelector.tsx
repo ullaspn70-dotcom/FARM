@@ -55,7 +55,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ compact = fa
         aria-expanded={open}
       >
         <Globe size={16} />
-        <span className="language-selector-label">{current?.nativeLabel ?? "English"}</span>
+        <span className="language-selector-label">{current?.nativeLabel ?? t("language.english")}</span>
         {!compact && <ChevronDown size={14} className={`lang-chevron ${open ? "open" : ""}`} />}
       </button>
 
@@ -69,7 +69,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ compact = fa
             onClick={handleAutoSelect}
           >
             <span className="language-native">
-              Auto — Farm State
+              {t("language.auto")}
             </span>
 
             {languageMode === "auto" && suggestedLocale && (
