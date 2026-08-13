@@ -105,21 +105,71 @@ class RiskEngine:
                     RiskEngine.deactivate_incident_factors(db, farm_id, incident.id)
 
         RiskEngine.deactivate_orphan_incident_factors(db, farm_id)
+        RiskEngine.deactivate_static_seed_factors(db, farm_id)
+        RiskEngine.limit_open_reported_penalties(db, farm_id, max_open=2)
 
     @staticmethod
-    def deactivate_orphan_incident_factors(db: Session, farm_id: str) -> None:
-        """Deactivate legacy incident factors with no open incident lifecycle."""
+    def actionable_incident_ids(db: Session, farm_id: str) -> set[str]:
         open_statuses = {
             IncidentStatus.REPORTED,
             IncidentStatus.UNDER_REVIEW,
             IncidentStatus.MORE_INFO_REQUIRED,
         }
+        actionable: set[str] = set()
+        incidents = db.query(Incident).filter(Incident.farm_id == farm_id).all()
+        for incident in incidents:
+            if incident.status in open_statuses:
+                actionable.add(incident.id)
+                continue
+            if incident.status == IncidentStatus.VERIFIED:
+                open_actions = (
+                    db.query(func.count(CorrectiveAction.id))
+                    .filter(
+                        CorrectiveAction.incident_id == incident.id,
+                        CorrectiveAction.status.notin_([
+                            CorrectiveActionStatus.VERIFIED,
+                            CorrectiveActionStatus.CLOSED,
+                        ]),
+                    )
+                    .scalar()
+                ) or 0
+                if open_actions > 0:
+                    actionable.add(incident.id)
+        return actionable
+
+    @staticmethod
+    def deactivate_static_seed_factors(db: Session, farm_id: str) -> None:
+        for factor_id in ("rf-1", "rf-2", "rf-3", "rf-4"):
+            factor = (
+                db.query(RiskFactor)
+                .filter(RiskFactor.id == factor_id, RiskFactor.farm_id == farm_id)
+                .first()
+            )
+            if factor:
+                factor.is_active = False
+        db.flush()
+
+    @staticmethod
+    def limit_open_reported_penalties(db: Session, farm_id: str, max_open: int = 2) -> None:
+        """Keep penalties only for the newest open incidents so demo farms recover from test spam."""
+        open_statuses = [
+            IncidentStatus.REPORTED,
+            IncidentStatus.UNDER_REVIEW,
+            IncidentStatus.MORE_INFO_REQUIRED,
+        ]
         open_incidents = (
             db.query(Incident)
             .filter(Incident.farm_id == farm_id, Incident.status.in_(open_statuses))
+            .order_by(Incident.created_at.desc())
             .all()
         )
-        open_ids = {incident.id for incident in open_incidents}
+        for incident in open_incidents[max_open:]:
+            RiskEngine.deactivate_incident_factors(db, farm_id, incident.id)
+
+    @staticmethod
+    def deactivate_orphan_incident_factors(db: Session, farm_id: str) -> None:
+        """Deactivate legacy incident factors with no open incident lifecycle."""
+        actionable_ids = RiskEngine.actionable_incident_ids(db, farm_id)
 
         active_factors = (
             db.query(RiskFactor)
@@ -135,7 +185,7 @@ class RiskEngine:
         for factor in active_factors:
             incident_id = RiskEngine.extract_incident_id(factor)
             if incident_id:
-                if incident_id not in open_ids:
+                if incident_id not in actionable_ids:
                     factor.is_active = False
                 elif incident_id in seen_incident_ids:
                     factor.is_active = False
@@ -143,7 +193,7 @@ class RiskEngine:
                     seen_incident_ids.add(incident_id)
                 continue
 
-            if not open_incidents:
+            if not actionable_ids:
                 factor.is_active = False
 
         db.flush()

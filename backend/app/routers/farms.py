@@ -19,6 +19,7 @@ from app.schemas.farm import (
 from app.services.farm_service import FarmService
 from app.services.health_service import ChecklistService
 from app.services.passport_service import PassportService
+from app.services.risk_service import RiskEngine
 from app.utils.serializers import farm_to_response, passport_to_response
 
 router = APIRouter(prefix="/farms", tags=["Farms"])
@@ -30,6 +31,11 @@ def list_farms(
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
     farms = FarmService.list_farms(db, current_user)
+    for farm in farms:
+        RiskEngine.recalculate_farm(db, farm)
+    db.commit()
+    for farm in farms:
+        db.refresh(farm)
     return [farm_to_response(f) for f in farms]
 
 
@@ -50,6 +56,9 @@ def get_farm(
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
     farm = FarmService.get_farm(db, farm_id, current_user)
+    RiskEngine.recalculate_farm(db, farm)
+    db.commit()
+    db.refresh(farm)
     return farm_to_response(farm)
 
 
