@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.exceptions import ConflictError, NotFoundError, ValidationAppError
 from app.models.corrective_action import ActionEvidence, CorrectiveAction
@@ -25,7 +25,11 @@ from app.utils.serializers import VET_PLAN_MARKER
 class CorrectiveActionService:
     @staticmethod
     def list_actions(db: Session, farm_id: str | None = None, user: User | None = None) -> list[CorrectiveAction]:
-        query = db.query(CorrectiveAction).order_by(CorrectiveAction.created_at.desc())
+        query = (
+            db.query(CorrectiveAction)
+            .options(joinedload(CorrectiveAction.evidence))
+            .order_by(CorrectiveAction.created_at.desc())
+        )
         if farm_id:
             FarmService.get_farm(db, farm_id, user)
             query = query.filter(CorrectiveAction.farm_id == farm_id)
@@ -38,15 +42,18 @@ class CorrectiveActionService:
 
     @staticmethod
     def list_awaiting_evidence(db: Session, user: User | None = None) -> list[CorrectiveAction]:
+        """Only corrective-action uploads (action_evidence table), never incident report files."""
         query = (
             db.query(CorrectiveAction)
+            .join(ActionEvidence)
+            .options(joinedload(CorrectiveAction.evidence))
             .filter(
                 CorrectiveAction.status.in_([
                     CorrectiveActionStatus.EVIDENCE_SUBMITTED,
                     CorrectiveActionStatus.AWAITING_VERIFICATION,
                 ])
             )
-            .order_by(CorrectiveAction.updated_at.desc())
+            .order_by(ActionEvidence.submitted_at.desc())
         )
         if user and user.district_id and user.role != UserRole.OFFICER:
             query = query.join(CorrectiveAction.farm).filter_by(district_id=user.district_id)
@@ -54,11 +61,23 @@ class CorrectiveActionService:
 
     @staticmethod
     def get_action(db: Session, action_id: str, user: User | None = None) -> CorrectiveAction:
-        action = db.query(CorrectiveAction).filter(CorrectiveAction.id == action_id).first()
+        action = (
+            db.query(CorrectiveAction)
+            .options(joinedload(CorrectiveAction.evidence))
+            .filter(CorrectiveAction.id == action_id)
+            .first()
+        )
         if not action:
             raise NotFoundError("CorrectiveAction", action_id)
         FarmService.ensure_farm_access(action.farm, user)
         return action
+
+    @staticmethod
+    def get_submitted_evidence(db: Session, action_id: str, user: User | None = None) -> ActionEvidence:
+        action = CorrectiveActionService.get_action(db, action_id, user)
+        if not action.evidence:
+            raise NotFoundError("ActionEvidence", action_id)
+        return action.evidence
 
     @staticmethod
     def create_action(db: Session, payload: CorrectiveActionCreate, user: User | None) -> CorrectiveAction:

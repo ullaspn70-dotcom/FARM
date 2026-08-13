@@ -1718,7 +1718,8 @@
 .ai-observations ul { margin: 8px 0 0; padding-left: 20px; color: #334155; }
 .ai-rec-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 8px; }
 .ai-rec-card { background: #fff; border: 1px solid #E9D5FF; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
-.ai-disclaimer { font-size: 12px; margin: 0; }
+.evidence-source-banner { background: #DBEAFE; border: 1px solid #93C5FD; color: #1E40AF; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+.evidence-queue-time { font-size: 11px; color: #64748B; }
 .evidence-link-banner { background: #EFF6FF; border: 1px solid #BFDBFE; padding: 12px 16px; border-radius: 10px; }
 .timeline-incident_verified { border-left-color: #DC2626; }
 .timeline-action_closed { border-left-color: #16A34A; }

@@ -6,9 +6,13 @@ import { EvidencePreview } from "../common/EvidencePreview";
 import { StatusBadge } from "../common/StatusBadge";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
-import { analyzeEvidenceLocally, stripVetPlanMarker } from "../../utils/evidenceAnalysis";
+import { analyzeEvidenceLocally, isVeterinaryActionPlan, stripVetPlanMarker } from "../../utils/evidenceAnalysis";
 
 const AWAITING_STATUSES = new Set(["Evidence Submitted", "Awaiting Verification"]);
+
+function evidenceTimestamp(action: CorrectiveAction): string {
+  return action.submittedEvidence?.timestamp ?? "";
+}
 
 export const VetEvidenceInspectionView: React.FC = () => {
   const { refreshFarms } = useAuth();
@@ -21,12 +25,19 @@ export const VetEvidenceInspectionView: React.FC = () => {
   const [message, setMessage] = useState("");
   const [analysis, setAnalysis] = useState<EvidenceAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [evidenceLoading, setEvidenceLoading] = useState(false);
+  const [displayEvidence, setDisplayEvidence] = useState<CorrectiveAction["submittedEvidence"]>(undefined);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       let list = await correctiveActionService.getAwaitingVerification();
-      list = list.filter((a) => AWAITING_STATUSES.has(a.status));
+      list = list.filter(
+        (a) =>
+          AWAITING_STATUSES.has(a.status) &&
+          !!a.submittedEvidence?.fileUrl &&
+          isVeterinaryActionPlan(a)
+      );
       setActions(list);
       setSelectedId((prev) => {
         if (prev && list.some((a) => a.id === prev)) return prev;
@@ -53,10 +64,36 @@ export const VetEvidenceInspectionView: React.FC = () => {
   const selected = actions.find((a) => a.id === selectedId) ?? null;
 
   useEffect(() => {
-    if (!selected?.submittedEvidence) {
+    if (!selected) {
+      setDisplayEvidence(undefined);
+      return;
+    }
+
+    let cancelled = false;
+    setEvidenceLoading(true);
+    correctiveActionService
+      .getSubmittedEvidence(selected.id)
+      .then((evidence) => {
+        if (!cancelled) setDisplayEvidence(evidence ?? undefined);
+      })
+      .catch(() => {
+        if (!cancelled) setDisplayEvidence(selected.submittedEvidence);
+      })
+      .finally(() => {
+        if (!cancelled) setEvidenceLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selected?.id, selected?.submittedEvidence?.fileUrl, selected?.submittedEvidence?.timestamp]);
+
+  useEffect(() => {
+    if (!selected || !displayEvidence) {
       setAnalysis(null);
       return;
     }
+    const actionForAnalysis = { ...selected, submittedEvidence: displayEvidence };
     if (selected.evidenceAnalysis) {
       setAnalysis(selected.evidenceAnalysis);
       return;
@@ -69,7 +106,7 @@ export const VetEvidenceInspectionView: React.FC = () => {
         if (!cancelled) setAnalysis(result);
       })
       .catch(() => {
-        if (!cancelled) setAnalysis(analyzeEvidenceLocally(selected));
+        if (!cancelled) setAnalysis(analyzeEvidenceLocally(actionForAnalysis));
       })
       .finally(() => {
         if (!cancelled) setAnalysisLoading(false);
@@ -77,7 +114,7 @@ export const VetEvidenceInspectionView: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [selected?.id, selected?.submittedEvidence?.fileName]);
+  }, [selected?.id, displayEvidence?.fileUrl, displayEvidence?.fileName]);
 
   const handleVerify = async (approved: boolean, noteOverride?: string) => {
     if (!selected) return;
@@ -116,7 +153,8 @@ export const VetEvidenceInspectionView: React.FC = () => {
             <span className="eyebrow-text">EVIDENCE INSPECTION PORTAL</span>
             <h2 className="view-title">Corrective Action Evidence Inspection</h2>
             <p className="view-subtitle">
-              Review farmer-uploaded photos and documents for each veterinary action plan item.
+              Review photos uploaded by farmers from the Corrective Actions page — not incident report
+              images.
             </p>
           </div>
         </div>
@@ -137,9 +175,10 @@ export const VetEvidenceInspectionView: React.FC = () => {
       ) : actions.length === 0 ? (
         <div className="empty-state evidence-empty-state">
           <FileSearch size={40} />
-          <p>No farmer evidence awaiting inspection.</p>
+          <p>No corrective-action evidence awaiting inspection.</p>
           <p className="text-muted">
-            When a farmer uploads evidence from Corrective Actions, it will appear here automatically.
+            When a farmer uploads evidence from the Veterinary Action Plan section in Corrective Actions,
+            it will appear here. Incident report photos stay on the Vet Dashboard only.
           </p>
         </div>
       ) : (
@@ -161,8 +200,11 @@ export const VetEvidenceInspectionView: React.FC = () => {
                 <span>{act.farmName}</span>
                 {act.submittedEvidence && (
                   <span className="evidence-queue-thumb-label">
-                    Photo: {act.submittedEvidence.fileName}
+                    Corrective upload: {act.submittedEvidence.fileName}
                   </span>
+                )}
+                {evidenceTimestamp(act) && (
+                  <span className="evidence-queue-time">{evidenceTimestamp(act)}</span>
                 )}
                 <StatusBadge type="action" value={act.status} size="sm" />
               </button>
@@ -193,37 +235,51 @@ export const VetEvidenceInspectionView: React.FC = () => {
               <p className="section-text">{stripVetPlanMarker(selected.description)}</p>
 
               <div className="farmer-evidence-block">
-                <h4 className="section-title">Farmer submitted evidence</h4>
-                {selected.submittedEvidence ? (
+                <div className="evidence-source-banner">
+                  Corrective Actions upload — this is the photo the farmer submitted for this action
+                  plan task, not the original incident report image.
+                </div>
+                <h4 className="section-title">Farmer corrective action evidence</h4>
+                {evidenceLoading ? (
+                  <p className="text-muted">Loading farmer upload…</p>
+                ) : displayEvidence ? (
                   <>
                     <div className="farmer-photo-frame">
                       <EvidencePreview
-                        fileName={selected.submittedEvidence.fileName}
-                        fileUrl={selected.submittedEvidence.fileUrl}
-                        notes={selected.submittedEvidence.notes}
+                        fileName={displayEvidence.fileName}
+                        fileUrl={displayEvidence.fileUrl}
+                        notes={displayEvidence.notes}
                       />
                     </div>
                     <div className="evidence-meta-grid">
                       <div>
+                        <span className="label">Action ID</span>
+                        <strong>{selected.id}</strong>
+                      </div>
+                      <div>
+                        <span className="label">Uploaded file</span>
+                        <strong>{displayEvidence.fileName}</strong>
+                      </div>
+                      <div>
                         <span className="label">Submitted at</span>
-                        <strong>{selected.submittedEvidence.timestamp}</strong>
+                        <strong>{displayEvidence.timestamp}</strong>
                       </div>
                       <div>
                         <span className="label">Location</span>
-                        <strong>{selected.submittedEvidence.location || "—"}</strong>
+                        <strong>{displayEvidence.location || "—"}</strong>
                       </div>
                       <div>
                         <span className="label">Farmer note</span>
-                        <strong>{selected.submittedEvidence.notes || "—"}</strong>
+                        <strong>{displayEvidence.notes || "—"}</strong>
                       </div>
                     </div>
                   </>
                 ) : (
-                  <p className="text-muted">Waiting for farmer to upload evidence.</p>
+                  <p className="text-muted">Waiting for farmer to upload evidence from Corrective Actions.</p>
                 )}
               </div>
 
-              {selected.submittedEvidence && (
+              {displayEvidence && (
                 <div className="ai-evidence-analysis-block">
                   <div className="ai-analysis-header">
                     <Brain size={20} />
@@ -278,7 +334,7 @@ export const VetEvidenceInspectionView: React.FC = () => {
                 <button
                   type="button"
                   className="btn-action-validate"
-                  disabled={processing || !selected.submittedEvidence}
+                  disabled={processing || !displayEvidence}
                   onClick={() => handleVerify(true)}
                 >
                   <CheckCircle size={16} />
@@ -287,7 +343,7 @@ export const VetEvidenceInspectionView: React.FC = () => {
                 <button
                   type="button"
                   className="btn-action-reject"
-                  disabled={processing || !selected.submittedEvidence}
+                  disabled={processing || !displayEvidence}
                   onClick={() => handleVerify(false)}
                 >
                   <XCircle size={16} />
@@ -296,7 +352,7 @@ export const VetEvidenceInspectionView: React.FC = () => {
                 <button
                   type="button"
                   className="btn-action-request"
-                  disabled={processing || !selected.submittedEvidence}
+                  disabled={processing || !displayEvidence}
                   onClick={() =>
                     handleVerify(
                       false,

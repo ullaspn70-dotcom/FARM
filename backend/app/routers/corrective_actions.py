@@ -12,10 +12,11 @@ from app.schemas.corrective_action import (
     CorrectiveActionCreate,
     CorrectiveActionResponse,
     EvidenceAnalysisResponse,
+    SubmittedEvidence,
 )
 from app.services.corrective_action_service import CorrectiveActionService
 from app.services.file_service import save_upload_file
-from app.utils.serializers import action_to_response
+from app.utils.serializers import action_to_response, evidence_to_submitted
 
 router = APIRouter(prefix="/corrective-actions", tags=["Corrective Actions"])
 
@@ -47,6 +48,27 @@ def create_action(
 ):
     action = CorrectiveActionService.create_action(db, payload, current_user)
     return action_to_response(action, db)
+
+
+@router.get("/{action_id}", response_model=CorrectiveActionResponse)
+def get_action(
+    action_id: str,
+    db: Session = Depends(get_db),
+    current_user: Annotated[User | None, Depends(get_optional_user)] = None,
+):
+    action = CorrectiveActionService.get_action(db, action_id, current_user)
+    return action_to_response(action, db, include_analysis=True)
+
+
+@router.get("/{action_id}/submitted-evidence", response_model=SubmittedEvidence)
+def get_submitted_evidence(
+    action_id: str,
+    db: Session = Depends(get_db),
+    current_user: Annotated[User | None, Depends(require_roles(UserRole.VETERINARIAN, UserRole.OFFICER, UserRole.FARMER))] = None,
+):
+    """Return only the farmer's Corrective Actions upload — never incident report media."""
+    evidence = CorrectiveActionService.get_submitted_evidence(db, action_id, current_user)
+    return evidence_to_submitted(evidence, db)
 
 
 @router.post("/{action_id}/evidence", response_model=CorrectiveActionResponse)
