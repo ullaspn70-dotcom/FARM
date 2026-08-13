@@ -82,6 +82,18 @@ class CorrectiveActionService:
         db.add(action)
         db.commit()
         db.refresh(action)
+
+        if action.incident_id:
+            NotificationService.create(
+                db,
+                title="Corrective Action Assigned",
+                message=f"Veterinary action plan item: {action.title}. Upload evidence when complete.",
+                notification_type=NotificationType.CORRECTIVE,
+                target_role=UserRole.FARMER,
+                action_url="/actions",
+            )
+            db.commit()
+
         return action
 
     @staticmethod

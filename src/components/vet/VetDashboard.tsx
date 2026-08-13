@@ -335,6 +335,7 @@ export const VetDashboard: React.FC = () => {
 
             <VeterinaryActionPlanBuilder
               incident={selectedIncident}
+              farmId={selectedIncident.farmId}
               ownerName={farmContext?.owner ?? "Farm Owner"}
               onSent={() => setActionSuccess("Veterinary Action Plan sent to farmer.")}
             />

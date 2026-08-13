@@ -7,11 +7,13 @@ import { EvidenceUploadModal } from "./EvidenceUploadModal";
 import { CorrectiveActionTraceability } from "./CorrectiveActionTraceability";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LocaleContext";
+import { useNotifications } from "../../context/NotificationContext";
 import { translateContent } from "../../i18n/contentTranslate";
 import { translateData } from "../../i18n/dataTranslations";
 
 export const CorrectiveActionsList: React.FC = () => {
   const { role, activeFarm, refreshFarms } = useAuth();
+  const { refreshNotifications } = useNotifications();
   const { t, locale } = useTranslation();
   const [actions, setActions] = useState<CorrectiveAction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,7 @@ export const CorrectiveActionsList: React.FC = () => {
       }
       await fetchActions();
       await refreshFarms();
+      await refreshNotifications();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("actions.error"));
     }

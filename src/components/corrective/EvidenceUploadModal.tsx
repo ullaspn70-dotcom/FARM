@@ -3,6 +3,7 @@ import { X, Upload, MapPin, Clock, FileText, AlertTriangle, CheckCircle2 } from 
 import type { CorrectiveAction } from "../../types";
 import { correctiveActionService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../context/NotificationContext";
 import { useTranslation } from "../../context/LocaleContext";
 import { translateContent } from "../../i18n/contentTranslate";
 import { translateData } from "../../i18n/dataTranslations";
@@ -21,6 +22,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
   onSubmitted,
 }) => {
   const { activeFarm } = useAuth();
+  const { refreshNotifications } = useNotifications();
   const { t, locale } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
@@ -93,6 +95,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
         location: locationTag,
       });
       setSubmitSuccess(true);
+      await refreshNotifications();
       onSubmitted();
       window.setTimeout(() => onClose(), 900);
     } catch (err) {

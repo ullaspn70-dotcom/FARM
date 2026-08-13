@@ -5,9 +5,11 @@ import { correctiveActionService, riskService } from "../../services/api";
 import { EvidencePreview } from "../common/EvidencePreview";
 import { StatusBadge } from "../common/StatusBadge";
 import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../context/NotificationContext";
 
 export const EvidenceInspectionPanel: React.FC = () => {
   const { refreshFarms } = useAuth();
+  const { refreshNotifications } = useNotifications();
   const [actions, setActions] = useState<CorrectiveAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -44,6 +46,7 @@ export const EvidenceInspectionPanel: React.FC = () => {
         await riskService.recalculateFarm(selected.farmId).catch(() => undefined);
       }
       await refreshFarms();
+      await refreshNotifications();
       setVetNote("");
       setMessage(approved ? "Evidence confirmed — corrective action closed." : "Evidence rejected — farmer must resubmit.");
       setSelectedId(null);

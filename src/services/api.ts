@@ -17,7 +17,15 @@ import type {
   ScoreTimelineEvent,
 } from "../types";
 
+import { getDefaultRecommendedActions } from "../data/recommendedActions";
+
 const PRODUCTION_API = "https://agrisentinel-api.onrender.com";
+
+function isNotFoundError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return msg.includes("404") || msg.includes("not found");
+}
 
 function resolveApiBase(): string {
   const configured = import.meta.env.VITE_API_BASE_URL?.trim();
@@ -172,18 +180,53 @@ export const incidentService = {
     });
   },
 
-  async getRecommendedActions(incidentId: string): Promise<RecommendedAction[]> {
-    return apiFetch<RecommendedAction[]>(`/incidents/${incidentId}/recommended-actions`);
+  async getRecommendedActions(
+    incidentId: string,
+    incidentType?: string
+  ): Promise<RecommendedAction[]> {
+    try {
+      return await apiFetch<RecommendedAction[]>(`/incidents/${incidentId}/recommended-actions`);
+    } catch (err) {
+      if (incidentType && isNotFoundError(err)) {
+        return getDefaultRecommendedActions(incidentType);
+      }
+      throw err;
+    }
   },
 
   async sendActionPlan(
     incidentId: string,
+    farmId: string,
     actions: ActionPlanItem[]
   ): Promise<{ incidentId: string; actionsCreated: number; actionIds: string[] }> {
-    return apiFetch(`/incidents/${incidentId}/action-plan`, {
-      method: "POST",
-      body: JSON.stringify({ actions }),
-    });
+    try {
+      return await apiFetch(`/incidents/${incidentId}/action-plan`, {
+        method: "POST",
+        body: JSON.stringify({ actions }),
+      });
+    } catch (err) {
+      if (!isNotFoundError(err)) throw err;
+      const actionIds: string[] = [];
+      for (const action of actions) {
+        const created = await apiFetch<CorrectiveAction>("/corrective-actions", {
+          method: "POST",
+          body: JSON.stringify({
+            farmId,
+            incidentId,
+            title: action.title,
+            description: action.veterinaryNote
+              ? `${action.description}\n\nVeterinary note: ${action.veterinaryNote}`
+              : action.description,
+            priority: action.priority,
+            assignedPerson: action.assignedPerson || "Farm Owner",
+            deadline: action.deadline,
+            evidenceRequired: action.evidenceRequired,
+          }),
+        });
+        actionIds.push(created.id);
+      }
+      return { incidentId, actionsCreated: actionIds.length, actionIds };
+    }
   },
 };
 
@@ -191,6 +234,31 @@ export const correctiveActionService = {
   async getActions(farmId?: string): Promise<CorrectiveAction[]> {
     const query = farmId ? `?farmId=${encodeURIComponent(farmId)}` : "";
     return apiFetch<CorrectiveAction[]>(`/corrective-actions${query}`);
+  },
+
+  async createAction(payload: {
+    farmId: string;
+    incidentId?: string;
+    title: string;
+    description: string;
+    priority: string;
+    assignedPerson: string;
+    deadline: string;
+    evidenceRequired?: boolean;
+  }): Promise<CorrectiveAction> {
+    return apiFetch<CorrectiveAction>("/corrective-actions", {
+      method: "POST",
+      body: JSON.stringify({
+        farmId: payload.farmId,
+        incidentId: payload.incidentId,
+        title: payload.title,
+        description: payload.description,
+        priority: payload.priority,
+        assignedPerson: payload.assignedPerson,
+        deadline: payload.deadline,
+        evidenceRequired: payload.evidenceRequired ?? true,
+      }),
+    });
   },
 
   async submitEvidence(
@@ -212,7 +280,15 @@ export const correctiveActionService = {
   },
 
   async getAwaitingVerification(): Promise<CorrectiveAction[]> {
-    return apiFetch<CorrectiveAction[]>("/corrective-actions/awaiting-verification");
+    try {
+      return await apiFetch<CorrectiveAction[]>("/corrective-actions/awaiting-verification");
+    } catch (err) {
+      if (!isNotFoundError(err)) throw err;
+      const all = await correctiveActionService.getActions();
+      return all.filter(
+        (a) => a.status === "Evidence Submitted" || a.status === "Awaiting Verification"
+      );
+    }
   },
 };
 

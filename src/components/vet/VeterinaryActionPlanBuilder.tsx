@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { ClipboardList, Plus, Send, Trash2 } from "lucide-react";
 import type { ActionPlanItem, IncidentReport, RecommendedAction } from "../../types";
 import { incidentService } from "../../services/api";
+import { getDefaultRecommendedActions } from "../../data/recommendedActions";
+import { useNotifications } from "../../context/NotificationContext";
 
 interface PlanRow extends ActionPlanItem {
   id: string;
@@ -10,6 +12,7 @@ interface PlanRow extends ActionPlanItem {
 
 interface VeterinaryActionPlanBuilderProps {
   incident: IncidentReport;
+  farmId: string;
   ownerName: string;
   onSent: () => void;
 }
@@ -20,49 +23,59 @@ function defaultDeadline(): string {
   return d.toISOString().slice(0, 10);
 }
 
+function toPlanRows(items: RecommendedAction[], ownerName: string): PlanRow[] {
+  return items.map((item, idx) => ({
+    id: `rec-${idx}-${item.key}`,
+    selected: item.selected,
+    title: item.title,
+    description: item.description,
+    priority: item.priority,
+    assignedPerson: ownerName,
+    deadline: defaultDeadline(),
+    evidenceRequired: item.evidenceRequired,
+    veterinaryNote: "",
+  }));
+}
+
 export const VeterinaryActionPlanBuilder: React.FC<VeterinaryActionPlanBuilderProps> = ({
   incident,
+  farmId,
   ownerName,
   onSent,
 }) => {
+  const { refreshNotifications } = useNotifications();
   const [rows, setRows] = useState<PlanRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [usedFallback, setUsedFallback] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError("");
+    setUsedFallback(false);
+
     incidentService
-      .getRecommendedActions(incident.id)
-      .then((items: RecommendedAction[]) => {
+      .getRecommendedActions(incident.id, incident.incidentType)
+      .then((items) => {
         if (cancelled) return;
-        setRows(
-          items.map((item, idx) => ({
-            id: `rec-${idx}-${item.key}`,
-            selected: item.selected,
-            title: item.title,
-            description: item.description,
-            priority: item.priority,
-            assignedPerson: ownerName,
-            deadline: defaultDeadline(),
-            evidenceRequired: item.evidenceRequired,
-            veterinaryNote: "",
-          }))
-        );
+        setRows(toPlanRows(items, ownerName));
       })
       .catch(() => {
-        if (!cancelled) setError("Could not load recommended actions.");
+        if (cancelled) return;
+        setUsedFallback(true);
+        setRows(toPlanRows(getDefaultRecommendedActions(incident.incidentType), ownerName));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
-  }, [incident.id, ownerName]);
+  }, [incident.id, incident.incidentType, ownerName]);
 
   const updateRow = (id: string, patch: Partial<PlanRow>) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -100,17 +113,28 @@ export const VeterinaryActionPlanBuilder: React.FC<VeterinaryActionPlanBuilderPr
     setSuccess("");
     try {
       const payload: ActionPlanItem[] = selected.map(({ selected: _s, id: _id, ...rest }) => rest);
-      await incidentService.sendActionPlan(incident.id, payload);
-      setSuccess(`Action plan sent — ${selected.length} corrective action(s) assigned to farmer.`);
+      const result = await incidentService.sendActionPlan(incident.id, farmId, payload);
+      setSuccess(
+        `Veterinary Action Plan sent — ${result.actionsCreated} corrective action(s) assigned. Farmer notified.`
+      );
+      await refreshNotifications();
       onSent();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send action plan.");
+      setError(err instanceof Error ? err.message : "Failed to send action plan. Ensure you are logged in as veterinarian.");
     } finally {
       setSending(false);
     }
   };
 
-  if (incident.status !== "Verified") return null;
+  if (incident.status !== "Verified") {
+    return (
+      <div className="workspace-section action-plan-builder">
+        <p className="text-muted">
+          Verify this incident first, then the Veterinary Action Plan builder will appear here.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="workspace-section action-plan-builder">
@@ -119,11 +143,19 @@ export const VeterinaryActionPlanBuilder: React.FC<VeterinaryActionPlanBuilderPr
         <h4 className="section-title">Veterinary Action Plan</h4>
       </div>
       <p className="section-text text-muted">
-        System-assisted recommendations — review, edit, and send structured corrective actions to the farmer.
+        Select recommended biosecurity actions, edit as needed, then send to the farmer. Each action
+        appears under Corrective Actions with evidence upload required.
       </p>
+      {usedFallback && (
+        <p className="form-success-banner" style={{ marginBottom: 12 }}>
+          Loaded system recommendations (API sync pending — actions will still be created on send).
+        </p>
+      )}
 
       {loading ? (
         <p className="text-muted">Loading recommended actions…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-muted">No recommendations loaded. Click Add Action to create manually.</p>
       ) : (
         <>
           <div className="recommended-actions-list">

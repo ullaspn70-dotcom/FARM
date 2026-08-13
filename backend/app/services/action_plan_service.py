@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
@@ -81,7 +81,10 @@ class ActionPlanService:
         item: ActionPlanItemRequest,
     ) -> CorrectiveAction:
         try:
-            deadline = datetime.fromisoformat(item.deadline.replace("Z", "+00:00")).date()
+            if len(item.deadline) == 10:
+                deadline = date.fromisoformat(item.deadline)
+            else:
+                deadline = datetime.fromisoformat(item.deadline.replace("Z", "+00:00")).date()
         except ValueError:
             deadline = (datetime.now(timezone.utc) + timedelta(days=3)).date()
 
