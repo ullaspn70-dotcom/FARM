@@ -18,6 +18,8 @@ import type {
 } from "../types";
 
 import { getDefaultRecommendedActions } from "../data/recommendedActions";
+import { analyzeEvidenceLocally, VET_PLAN_MARKER } from "../utils/evidenceAnalysis";
+import type { EvidenceAnalysis } from "../types";
 
 const PRODUCTION_API = "https://agrisentinel-api.onrender.com";
 
@@ -208,15 +210,16 @@ export const incidentService = {
       if (!isNotFoundError(err)) throw err;
       const actionIds: string[] = [];
       for (const action of actions) {
+        const body = action.veterinaryNote
+          ? `${action.description}\n\nVeterinary note: ${action.veterinaryNote}`
+          : action.description;
         const created = await apiFetch<CorrectiveAction>("/corrective-actions", {
           method: "POST",
           body: JSON.stringify({
             farmId,
             incidentId,
             title: action.title,
-            description: action.veterinaryNote
-              ? `${action.description}\n\nVeterinary note: ${action.veterinaryNote}`
-              : action.description,
+            description: `${VET_PLAN_MARKER}\n${body}`,
             priority: action.priority,
             assignedPerson: action.assignedPerson || "Farm Owner",
             deadline: action.deadline,
@@ -231,9 +234,15 @@ export const incidentService = {
 };
 
 export const correctiveActionService = {
+  attachEvidenceAnalysis(action: CorrectiveAction): CorrectiveAction {
+    if (action.evidenceAnalysis || !action.submittedEvidence) return action;
+    return { ...action, evidenceAnalysis: analyzeEvidenceLocally(action) };
+  },
+
   async getActions(farmId?: string): Promise<CorrectiveAction[]> {
     const query = farmId ? `?farmId=${encodeURIComponent(farmId)}` : "";
-    return apiFetch<CorrectiveAction[]>(`/corrective-actions${query}`);
+    const list = await apiFetch<CorrectiveAction[]>(`/corrective-actions${query}`);
+    return list.map((a) => correctiveActionService.attachEvidenceAnalysis(a));
   },
 
   async createAction(payload: {
@@ -269,7 +278,20 @@ export const correctiveActionService = {
     form.append("file", evidence.file);
     form.append("notes", evidence.notes);
     form.append("location", evidence.location);
-    return apiFetchForm<CorrectiveAction>(`/corrective-actions/${actionId}/evidence`, form);
+    const result = await apiFetchForm<CorrectiveAction>(`/corrective-actions/${actionId}/evidence`, form);
+    return correctiveActionService.attachEvidenceAnalysis(result);
+  },
+
+  async analyzeEvidence(actionId: string): Promise<EvidenceAnalysis> {
+    try {
+      return await apiFetch<EvidenceAnalysis>(`/corrective-actions/${actionId}/analyze-evidence`);
+    } catch (err) {
+      if (!isNotFoundError(err)) throw err;
+      const all = await correctiveActionService.getActions();
+      const action = all.find((a) => a.id === actionId);
+      if (!action) throw err;
+      return analyzeEvidenceLocally(action);
+    }
   },
 
   async verifyAction(actionId: string, approved: boolean, notes?: string): Promise<CorrectiveAction> {
@@ -281,13 +303,14 @@ export const correctiveActionService = {
 
   async getAwaitingVerification(): Promise<CorrectiveAction[]> {
     try {
-      return await apiFetch<CorrectiveAction[]>("/corrective-actions/awaiting-verification");
+      const list = await apiFetch<CorrectiveAction[]>("/corrective-actions/awaiting-verification");
+      return list.map((a) => correctiveActionService.attachEvidenceAnalysis(a));
     } catch (err) {
       if (!isNotFoundError(err)) throw err;
       const all = await correctiveActionService.getActions();
-      return all.filter(
-        (a) => a.status === "Evidence Submitted" || a.status === "Awaiting Verification"
-      );
+      return all
+        .filter((a) => a.status === "Evidence Submitted" || a.status === "Awaiting Verification")
+        .map((a) => correctiveActionService.attachEvidenceAnalysis(a));
     }
   },
 };

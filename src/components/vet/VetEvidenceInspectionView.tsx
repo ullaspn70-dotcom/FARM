@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { CheckCircle, FileSearch, HelpCircle, RefreshCw, XCircle } from "lucide-react";
-import type { CorrectiveAction } from "../../types";
+import { Brain, CheckCircle, FileSearch, HelpCircle, RefreshCw, XCircle } from "lucide-react";
+import type { CorrectiveAction, EvidenceAnalysis } from "../../types";
 import { correctiveActionService, riskService } from "../../services/api";
 import { EvidencePreview } from "../common/EvidencePreview";
 import { StatusBadge } from "../common/StatusBadge";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
+import { analyzeEvidenceLocally, stripVetPlanMarker } from "../../utils/evidenceAnalysis";
 
 const AWAITING_STATUSES = new Set(["Evidence Submitted", "Awaiting Verification"]);
 
@@ -18,6 +19,8 @@ export const VetEvidenceInspectionView: React.FC = () => {
   const [vetNote, setVetNote] = useState("");
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState("");
+  const [analysis, setAnalysis] = useState<EvidenceAnalysis | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,6 +51,33 @@ export const VetEvidenceInspectionView: React.FC = () => {
   }, [load]);
 
   const selected = actions.find((a) => a.id === selectedId) ?? null;
+
+  useEffect(() => {
+    if (!selected?.submittedEvidence) {
+      setAnalysis(null);
+      return;
+    }
+    if (selected.evidenceAnalysis) {
+      setAnalysis(selected.evidenceAnalysis);
+      return;
+    }
+    let cancelled = false;
+    setAnalysisLoading(true);
+    correctiveActionService
+      .analyzeEvidence(selected.id)
+      .then((result) => {
+        if (!cancelled) setAnalysis(result);
+      })
+      .catch(() => {
+        if (!cancelled) setAnalysis(analyzeEvidenceLocally(selected));
+      })
+      .finally(() => {
+        if (!cancelled) setAnalysisLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected?.id, selected?.submittedEvidence?.fileName]);
 
   const handleVerify = async (approved: boolean, noteOverride?: string) => {
     if (!selected) return;
@@ -160,7 +190,7 @@ export const VetEvidenceInspectionView: React.FC = () => {
                 </div>
               </div>
 
-              <p className="section-text">{selected.description}</p>
+              <p className="section-text">{stripVetPlanMarker(selected.description)}</p>
 
               <div className="farmer-evidence-block">
                 <h4 className="section-title">Farmer submitted evidence</h4>
@@ -192,6 +222,48 @@ export const VetEvidenceInspectionView: React.FC = () => {
                   <p className="text-muted">Waiting for farmer to upload evidence.</p>
                 )}
               </div>
+
+              {selected.submittedEvidence && (
+                <div className="ai-evidence-analysis-block">
+                  <div className="ai-analysis-header">
+                    <Brain size={20} />
+                    <h4 className="section-title">Aarohi AI Evidence Analysis</h4>
+                    {analysis?.analysisMethod && (
+                      <span className="ai-method-badge">{analysis.analysisMethod}</span>
+                    )}
+                  </div>
+                  {analysisLoading ? (
+                    <p className="text-muted">Analyzing image and problem description…</p>
+                  ) : analysis ? (
+                    <>
+                      <p className="ai-analysis-summary">{analysis.summary}</p>
+                      <div className="ai-observations">
+                        <span className="label">Observations</span>
+                        <ul>
+                          {analysis.observations.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="ai-recommended-actions">
+                        <span className="label">Recommended follow-up actions</span>
+                        <div className="ai-rec-cards">
+                          {analysis.recommendedActions.map((rec) => (
+                            <div key={rec.title} className="ai-rec-card">
+                              <strong>{rec.title}</strong>
+                              <p>{rec.description}</p>
+                              <span className={`priority-badge priority-${rec.priority}`}>
+                                {rec.priority}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="ai-disclaimer text-muted">{analysis.disclaimer}</p>
+                    </>
+                  ) : null}
+                </div>
+              )}
 
               <label className="form-label">Veterinary inspection note</label>
               <textarea

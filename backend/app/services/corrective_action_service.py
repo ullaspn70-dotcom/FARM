@@ -19,6 +19,7 @@ from app.services.farm_service import FarmService
 from app.services.notification_service import NotificationService
 from app.services.risk_service import RiskEngine
 from app.utils.helpers import generate_id
+from app.utils.serializers import VET_PLAN_MARKER
 
 
 class CorrectiveActionService:
@@ -84,6 +85,10 @@ class CorrectiveActionService:
         db.refresh(action)
 
         if action.incident_id:
+            marked_desc = action.description
+            if VET_PLAN_MARKER not in marked_desc:
+                marked_desc = f"{VET_PLAN_MARKER}\n{marked_desc}"
+                action.description = marked_desc
             NotificationService.create(
                 db,
                 title="Corrective Action Assigned",

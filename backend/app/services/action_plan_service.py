@@ -88,7 +88,7 @@ class ActionPlanService:
         except ValueError:
             deadline = (datetime.now(timezone.utc) + timedelta(days=3)).date()
 
-        description = item.description
+        description = f"[Veterinary Action Plan]\n{item.description}"
         if item.veterinary_note:
             description = f"{description}\n\nVeterinary note: {item.veterinary_note}"
 

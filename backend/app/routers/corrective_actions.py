@@ -11,6 +11,7 @@ from app.schemas.corrective_action import (
     ActionVerifyRequest,
     CorrectiveActionCreate,
     CorrectiveActionResponse,
+    EvidenceAnalysisResponse,
 )
 from app.services.corrective_action_service import CorrectiveActionService
 from app.services.file_service import save_upload_file
@@ -25,7 +26,7 @@ def list_awaiting_verification(
     current_user: Annotated[User | None, Depends(require_roles(UserRole.VETERINARIAN, UserRole.OFFICER))] = None,
 ):
     actions = CorrectiveActionService.list_awaiting_evidence(db, current_user)
-    return [action_to_response(a, db) for a in actions]
+    return [action_to_response(a, db, include_analysis=True) for a in actions]
 
 
 @router.get("", response_model=list[CorrectiveActionResponse])
@@ -67,7 +68,7 @@ async def submit_evidence(
         location,
         current_user,
     )
-    return action_to_response(action, db)
+    return action_to_response(action, db, include_analysis=True)
 
 
 @router.post("/{action_id}/evidence/json", response_model=CorrectiveActionResponse)
@@ -86,7 +87,23 @@ def submit_evidence_json(
         payload.get("location", ""),
         current_user,
     )
-    return action_to_response(action, db)
+    return action_to_response(action, db, include_analysis=True)
+
+
+@router.get("/{action_id}/analyze-evidence", response_model=EvidenceAnalysisResponse)
+def analyze_evidence(
+    action_id: str,
+    db: Session = Depends(get_db),
+    current_user: Annotated[User | None, Depends(require_roles(UserRole.VETERINARIAN, UserRole.OFFICER))] = None,
+):
+    from app.core.exceptions import ValidationAppError
+    from app.services.evidence_analysis_service import EvidenceAnalysisService
+
+    action = CorrectiveActionService.get_action(db, action_id, current_user)
+    if not action.evidence:
+        raise ValidationAppError("No evidence submitted for this action.")
+    result = EvidenceAnalysisService.analyze(action, action.evidence)
+    return EvidenceAnalysisResponse(**result)
 
 
 @router.post("/{action_id}/verify", response_model=CorrectiveActionResponse)

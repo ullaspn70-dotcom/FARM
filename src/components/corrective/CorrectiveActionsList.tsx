@@ -10,6 +10,7 @@ import { useTranslation } from "../../context/LocaleContext";
 import { useNotifications } from "../../context/NotificationContext";
 import { translateContent } from "../../i18n/contentTranslate";
 import { translateData } from "../../i18n/dataTranslations";
+import { isVeterinaryActionPlan, stripVetPlanMarker } from "../../utils/evidenceAnalysis";
 
 const STATUS_ORDER: Record<string, number> = {
   Pending: 0,
@@ -25,6 +26,9 @@ function sortActions(list: CorrectiveAction[]): CorrectiveAction[] {
     const sa = STATUS_ORDER[a.status] ?? 99;
     const sb = STATUS_ORDER[b.status] ?? 99;
     if (sa !== sb) return sa - sb;
+    const ca = a.createdAt ?? "";
+    const cb = b.createdAt ?? "";
+    if (ca !== cb) return cb.localeCompare(ca);
     return a.deadline.localeCompare(b.deadline);
   });
 }
@@ -72,8 +76,20 @@ export const CorrectiveActionsList: React.FC = () => {
     if (role !== "farmer") return [];
     return actions.filter(
       (a) =>
-        (a.status === "Pending" || a.status === "In Progress") &&
-        a.evidenceRequired !== false
+        isVeterinaryActionPlan(a) &&
+        (a.status === "Pending" || a.status === "In Progress" || a.status === "Awaiting Verification")
+    );
+  }, [actions, role]);
+
+  const tableActions = useMemo(() => {
+    if (role !== "farmer") return actions;
+    return actions.filter(
+      (a) =>
+        isVeterinaryActionPlan(a) ||
+        a.status === "Awaiting Verification" ||
+        a.status === "Evidence Submitted" ||
+        a.status === "Closed" ||
+        a.status === "Verified"
     );
   }, [actions, role]);
 
@@ -98,7 +114,12 @@ export const CorrectiveActionsList: React.FC = () => {
       <tr className={vetPlanActions.some((v) => v.id === act.id) ? "vet-plan-row" : ""}>
         <td className="cell-main-info">
           <strong className="action-item-title">{translateContent(act.title, t)}</strong>
-          <p className="action-item-desc">{translateContent(act.description, t)}</p>
+          <p className="action-item-desc">
+            {translateContent(stripVetPlanMarker(act.description), t)}
+          </p>
+          {act.createdAt && (
+            <span className="farm-tag-sub">Assigned: {act.createdAt}</span>
+          )}
           {act.incidentId && (
             <span className="farm-tag-sub">Source incident: {act.incidentId}</span>
           )}
@@ -192,6 +213,17 @@ export const CorrectiveActionsList: React.FC = () => {
         </div>
       )}
 
+      {role === "farmer" && !loading && vetPlanActions.length === 0 && actions.some(isVeterinaryActionPlan) === false && (
+        <div className="empty-state vet-plan-empty-hint">
+          <ClipboardList size={32} />
+          <p>No veterinary action plan tasks yet.</p>
+          <p className="text-muted">
+            When your veterinarian sends an action plan after verifying an incident, your upload tasks
+            will appear here — not the old auto-generated items from August.
+          </p>
+        </div>
+      )}
+
       {role === "farmer" && !loading && vetPlanActions.length > 0 && (
         <section className="vet-action-plan-farmer-section">
           <div className="section-header-row">
@@ -209,8 +241,9 @@ export const CorrectiveActionsList: React.FC = () => {
                   <strong>{act.title}</strong>
                   <StatusBadge type="action" value={act.status} size="sm" />
                 </div>
-                <p>{act.description}</p>
+                <p>{stripVetPlanMarker(act.description)}</p>
                 <div className="vet-plan-card-meta">
+                  {act.createdAt && <span>Assigned: {act.createdAt}</span>}
                   <span>Due: {act.deadline}</span>
                   <span className={`priority-badge priority-${act.priority}`}>{act.priority}</span>
                 </div>
@@ -236,7 +269,7 @@ export const CorrectiveActionsList: React.FC = () => {
       <div className="actions-table-card">
         {loading ? (
           <div className="loading-state">{t("actions.loading")}</div>
-        ) : actions.length === 0 ? (
+        ) : tableActions.length === 0 ? (
           <div className="empty-state">{t("actions.empty")}</div>
         ) : (
           <div className="table-responsive-wrapper">
@@ -252,7 +285,7 @@ export const CorrectiveActionsList: React.FC = () => {
                   <th>{t("actions.colActions")}</th>
                 </tr>
               </thead>
-              <tbody>{actions.map(renderRow)}</tbody>
+              <tbody>{tableActions.map(renderRow)}</tbody>
             </table>
           </div>
         )}

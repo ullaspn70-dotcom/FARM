@@ -1710,6 +1710,15 @@
 .vet-plan-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .vet-plan-card-meta { display: flex; gap: 12px; font-size: 13px; color: #64748B; }
 .vet-plan-row { background: #FFFBEB; }
+.vet-plan-empty-hint { background: #fff; border: 1px dashed #CBD5E1; border-radius: 12px; padding: 24px; margin-bottom: 20px; text-align: center; }
+.ai-evidence-analysis-block { border: 1px solid #C4B5FD; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #FAF5FF 0%, #F5F3FF 100%); display: flex; flex-direction: column; gap: 14px; }
+.ai-analysis-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ai-method-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; background: #EDE9FE; color: #6D28D9; padding: 4px 8px; border-radius: 999px; }
+.ai-analysis-summary { font-size: 15px; color: #1E293B; margin: 0; }
+.ai-observations ul { margin: 8px 0 0; padding-left: 20px; color: #334155; }
+.ai-rec-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 8px; }
+.ai-rec-card { background: #fff; border: 1px solid #E9D5FF; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.ai-disclaimer { font-size: 12px; margin: 0; }
 .evidence-link-banner { background: #EFF6FF; border: 1px solid #BFDBFE; padding: 12px 16px; border-radius: 10px; }
 .timeline-incident_verified { border-left-color: #DC2626; }
 .timeline-action_closed { border-left-color: #16A34A; }

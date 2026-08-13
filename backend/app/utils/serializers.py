@@ -75,10 +75,26 @@ def evidence_file_to_response(evidence: IncidentEvidence, db: Session | None = N
     )
 
 
-def action_to_response(action: CorrectiveAction, db: Session | None = None) -> CorrectiveActionResponse:
+VET_PLAN_MARKER = "[Veterinary Action Plan]"
+
+
+def action_to_response(
+    action: CorrectiveAction,
+    db: Session | None = None,
+    include_analysis: bool = False,
+) -> CorrectiveActionResponse:
     submitted = None
     if action.evidence:
         submitted = evidence_to_submitted(action.evidence, db)
+
+    evidence_analysis = None
+    if include_analysis and action.evidence:
+        from app.services.evidence_analysis_service import EvidenceAnalysisService
+
+        evidence_analysis = EvidenceAnalysisService.analyze(action, action.evidence)
+
+    source = "veterinary_action_plan" if VET_PLAN_MARKER in (action.description or "") else "general"
+
     return CorrectiveActionResponse(
         id=action.id,
         farm_id=action.farm_id,
@@ -89,10 +105,13 @@ def action_to_response(action: CorrectiveAction, db: Session | None = None) -> C
         priority=action.priority.value,
         assigned_person=action.assigned_person,
         deadline=action.deadline.isoformat(),
+        created_at=_format_dt(action.created_at),
         status=action.status.value,
         evidence_required=action.evidence_required,
         verification_status=action.verification_status.value,
         submitted_evidence=submitted,
+        source=source,
+        evidence_analysis=evidence_analysis,
     )
 
 

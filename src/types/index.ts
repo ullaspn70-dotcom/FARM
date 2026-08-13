@@ -118,10 +118,12 @@ export interface CorrectiveAction {
   priority: "low" | "medium" | "high" | "urgent";
   assignedPerson: string;
   deadline: string;
+  createdAt?: string;
   status: CorrectiveActionStatus;
   evidenceRequired: boolean;
   verificationStatus: "Unverified" | "Verification Pending" | "Verified";
   incidentId?: string;
+  source?: "general" | "veterinary_action_plan";
   sourceType?: "incident" | "assessment" | "inspection" | "compliance";
   sourceLabel?: string;
   submittedEvidence?: {
@@ -131,6 +133,20 @@ export interface CorrectiveAction {
     location: string;
     notes: string;
   };
+  evidenceAnalysis?: EvidenceAnalysis;
+}
+
+export interface EvidenceAnalysis {
+  summary: string;
+  observations: string[];
+  recommendedActions: Array<{
+    title: string;
+    description: string;
+    priority: string;
+  }>;
+  analysisMethod: string;
+  disclaimer: string;
+  completeness?: "missing" | "partial" | "good";
 }
 
 export interface RiskSummary {
