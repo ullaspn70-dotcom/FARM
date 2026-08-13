@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_optional_user
 from app.database.session import get_db
+from app.models.enums import UserRole
 from app.models.spatial import VetFacility
 from app.models.user import User
 from app.schemas.gis import GisMapNodeResponse, SpatialRiskResponse
@@ -21,7 +22,10 @@ def get_gis_nodes(
     db: Session = Depends(get_db),
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
-    nodes = GisService.get_map_nodes(db, farm_type, risk_level)
+    district_id = None
+    if current_user and current_user.role == UserRole.OFFICER and current_user.district_id:
+        district_id = current_user.district_id
+    nodes = GisService.get_map_nodes(db, farm_type, risk_level, district_id)
     result = []
     for node in nodes:
         if "farm" in node:

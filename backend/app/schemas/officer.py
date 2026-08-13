@@ -1,6 +1,7 @@
 from pydantic import Field
 
 from app.schemas.common import CamelModel
+from app.schemas.farm import FarmResponse
 
 
 class OfficerStatsResponse(CamelModel):
@@ -35,3 +36,11 @@ class InspectionComplete(CamelModel):
     result: str
     notes: str | None = None
     inspection_date: str | None = Field(default=None, alias="inspectionDate")
+
+
+class OfficerFarmProfileResponse(CamelModel):
+    farm: FarmResponse
+    open_incidents: int = Field(serialization_alias="openIncidents")
+    open_actions: int = Field(serialization_alias="openActions")
+    incident_count: int = Field(serialization_alias="incidentCount")
+    action_count: int = Field(serialization_alias="actionCount")

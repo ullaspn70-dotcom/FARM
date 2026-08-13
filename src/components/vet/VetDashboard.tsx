@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Stethoscope, CheckCircle, HelpCircle, XCircle, Image, MapPin, ExternalLink } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 import type { IncidentReport } from "../../types";
 import { incidentService } from "../../services/api";
 import { StatusBadge } from "../common/StatusBadge";
 import { isImageFile, resolveMediaUrl } from "../../utils/mediaUrl";
 
 export const VetDashboard: React.FC = () => {
+  const { refreshFarms } = useAuth();
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIncident, setSelectedIncident] = useState<IncidentReport | null>(null);
@@ -55,6 +57,7 @@ export const VetDashboard: React.FC = () => {
           : "Incident rejected and marked as non-critical."
       );
       await fetchIncidents();
+      await refreshFarms();
     } catch (err) {
       console.error(err);
       const message = err instanceof Error ? err.message : "";

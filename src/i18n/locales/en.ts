@@ -230,6 +230,22 @@ const en: TranslationDictionary = {
   "officer.schedule.error": "Could not schedule inspection. Please try again.",
   "officer.schedule.dateRequired": "Please select an inspection date.",
 
+  "officer.detail.eyebrow": "REGISTERED FARM RECORD",
+  "officer.detail.location": "Location",
+  "officer.detail.owner": "Registered owner",
+  "officer.detail.capacity": "Livestock capacity",
+  "officer.detail.animals": "animals",
+  "officer.detail.score": "Biosecurity score",
+  "officer.detail.compliance": "Compliance rate",
+  "officer.detail.passport": "Biosecurity passport (this farm only)",
+  "officer.detail.incidents": "Incidents for this farm",
+  "officer.detail.actions": "Corrective actions for this farm",
+  "officer.detail.noIncidents": "No incidents recorded for this farm.",
+  "officer.detail.noActions": "No corrective actions for this farm.",
+  "officer.detail.openIncidentsNote": "{{count}} open incident(s) require attention on this farm.",
+  "officer.detail.error": "Could not load full farm record. Showing basic info.",
+  "officer.detail.clickHint": "Click a farm card to view its registered record",
+
   "vet.evidence.open": "Open evidence file",
   "vet.evidence.unavailable": "File URL unavailable",
 

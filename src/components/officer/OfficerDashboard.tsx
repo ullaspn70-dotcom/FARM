@@ -12,11 +12,19 @@ export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({ onNavigateTo
   const [stats, setStats] = useState<OfficerStats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const loadStats = () => {
+    setLoading(true);
+    officerService
+      .getOfficerStats()
+      .then((statsData) => {
+        setStats(statsData);
+      })
+      .catch(() => setStats(null))
+      .finally(() => setLoading(false));
+  };
+
   useEffect(() => {
-    officerService.getOfficerStats().then((statsData) => {
-      setStats(statsData);
-      setLoading(false);
-    });
+    loadStats();
   }, []);
 
   const total = stats
@@ -95,7 +103,7 @@ export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({ onNavigateTo
 
       <div className="officer-main-grid">
         <div className="priority-list-card priority-list-full">
-          <InspectionPriorityPanel />
+          <InspectionPriorityPanel onScheduleSuccess={loadStats} />
         </div>
 
         {stats && (

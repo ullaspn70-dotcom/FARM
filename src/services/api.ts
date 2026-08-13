@@ -235,6 +235,16 @@ export const officerService = {
       body: JSON.stringify({ farmId, scheduledAt, notes }),
     });
   },
+
+  async getFarmProfile(farmId: string): Promise<{
+    farm: Farm;
+    openIncidents: number;
+    openActions: number;
+    incidentCount: number;
+    actionCount: number;
+  }> {
+    return apiFetch(`/officer/farms/${encodeURIComponent(farmId)}/profile`);
+  },
 };
 
 export const notificationService = {

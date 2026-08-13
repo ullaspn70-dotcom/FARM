@@ -60,6 +60,10 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
     return true;
   });
 
+  const visibleFarmIds = new Set(
+    filteredNodes.filter((n) => !n.id.startsWith("VET")).map((n) => n.id)
+  );
+
   const farmIncidents = selectedNode
     ? incidents.filter((i) => i.farmId === selectedNode.id)
     : [];
@@ -142,7 +146,7 @@ export const GisFarmMap: React.FC<GisFarmMapProps> = ({ onOpenPassport, onNaviga
               );
             })}
 
-            {incidents.slice(0, 8).map((inc, idx) => {
+            {incidents.filter((inc) => visibleFarmIds.has(inc.farmId)).slice(0, 8).map((inc, idx) => {
               const farmNode = nodes.find((n) => n.id === inc.farmId);
               if (!farmNode) return null;
               const topPct = Math.max(10, Math.min(90, ((24.1 - farmNode.lat) / 1.1) * 100 + (idx % 3) * 3));

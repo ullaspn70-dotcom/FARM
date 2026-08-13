@@ -18,8 +18,15 @@ from app.utils.helpers import generate_id, haversine_km
 
 class GisService:
     @staticmethod
-    def get_map_nodes(db: Session, farm_type: str | None = None, risk_level: str | None = None) -> list[dict]:
+    def get_map_nodes(
+        db: Session,
+        farm_type: str | None = None,
+        risk_level: str | None = None,
+        district_id: str | None = None,
+    ) -> list[dict]:
         query = db.query(Farm)
+        if district_id:
+            query = query.filter(Farm.district_id == district_id)
         if farm_type:
             query = query.filter(Farm.farm_type == farm_type)
         if risk_level:
@@ -139,28 +146,45 @@ class OfficerService:
         from app.models.corrective_action import CorrectiveAction
         from app.models.enums import IncidentStatus, CorrectiveActionStatus
 
-        open_incidents = db.query(func.count(Incident.id)).filter(
-            Incident.status.in_([
-                IncidentStatus.REPORTED,
-                IncidentStatus.UNDER_REVIEW,
-                IncidentStatus.MORE_INFO_REQUIRED,
-            ])
-        ).scalar() or 0
+        farm_ids = [f.id for f in farms] if district_id else None
 
-        pending_verifications = db.query(func.count(Incident.id)).filter(
+        open_incident_filter = Incident.status.in_([
+            IncidentStatus.REPORTED,
+            IncidentStatus.UNDER_REVIEW,
+            IncidentStatus.MORE_INFO_REQUIRED,
+        ])
+        open_incidents_query = db.query(func.count(Incident.id)).filter(open_incident_filter)
+        if farm_ids is not None:
+            open_incidents_query = open_incidents_query.filter(Incident.farm_id.in_(farm_ids))
+        open_incidents = open_incidents_query.scalar() or 0
+
+        pending_verifications_query = db.query(func.count(Incident.id)).filter(
             Incident.status.in_([IncidentStatus.REPORTED, IncidentStatus.UNDER_REVIEW])
-        ).scalar() or 0
+        )
+        if farm_ids is not None:
+            pending_verifications_query = pending_verifications_query.filter(
+                Incident.farm_id.in_(farm_ids)
+            )
+        pending_verifications = pending_verifications_query.scalar() or 0
 
-        pending_inspections = db.query(func.count(Inspection.id)).filter(
+        pending_inspections_query = db.query(func.count(Inspection.id)).filter(
             Inspection.status == InspectionStatus.SCHEDULED
-        ).scalar() or 0
+        )
+        if farm_ids is not None:
+            pending_inspections_query = pending_inspections_query.filter(
+                Inspection.farm_id.in_(farm_ids)
+            )
+        pending_inspections = pending_inspections_query.scalar() or 0
 
-        open_actions = db.query(func.count(CorrectiveAction.id)).filter(
+        open_actions_query = db.query(func.count(CorrectiveAction.id)).filter(
             CorrectiveAction.status.notin_([
                 CorrectiveActionStatus.VERIFIED,
                 CorrectiveActionStatus.CLOSED,
             ])
-        ).scalar() or 0
+        )
+        if farm_ids is not None:
+            open_actions_query = open_actions_query.filter(CorrectiveAction.farm_id.in_(farm_ids))
+        open_actions = open_actions_query.scalar() or 0
 
         return {
             "total_registered_farms": total,

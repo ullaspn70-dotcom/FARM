@@ -1605,6 +1605,20 @@
 .action-center-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .ac-section { background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; }
 .priority-farm-card { background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.priority-farm-card-clickable { cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+.priority-farm-card-clickable:hover { border-color: #154D38; box-shadow: 0 4px 12px rgba(21, 77, 56, 0.12); }
+.officer-click-hint { font-size: 13px; color: #64748B; margin-top: 4px; }
+.officer-farm-detail-modal { max-width: 640px; max-height: 90vh; overflow-y: auto; }
+.officer-farm-detail-body { padding: 0 4px 8px; }
+.officer-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.officer-detail-passport { background: #F8FAFC; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+.passport-mini-grid { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; margin-top: 8px; }
+.officer-detail-section { margin-bottom: 16px; }
+.officer-detail-section h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; }
+.officer-detail-list { list-style: none; padding: 0; margin: 0; }
+.officer-detail-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #E2E8F0; }
+.officer-detail-note { font-size: 13px; color: #B45309; margin-top: 8px; }
+.officer-detail-actions { display: flex; justify-content: flex-end; padding-top: 8px; }
 .farm-type-icon { font-size: 18px; }
 .map-incident-marker { position: absolute; z-index: 5; transform: translate(-50%, -50%); }
 .score-sparkline { display: flex; flex-wrap: wrap; gap: 4px; font-weight: 600; color: #154D38; }

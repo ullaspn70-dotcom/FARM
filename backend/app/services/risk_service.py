@@ -50,8 +50,21 @@ class RiskEngine:
                 passport.quarantine_protocol_score,
                 passport.waste_management_score,
             ]
-            return round(sum(components) / len(components))
+            baseline = round(sum(components) / len(components))
+            if baseline > 0:
+                return baseline
 
+        latest_history = (
+            db.query(RiskScoreHistory)
+            .filter(RiskScoreHistory.farm_id == farm.id)
+            .order_by(RiskScoreHistory.recorded_at.desc())
+            .first()
+        )
+        if latest_history and latest_history.score > 0:
+            return latest_history.score
+
+        if farm.previous_score > 0:
+            return farm.previous_score
         if farm.biosecurity_score > 0:
             return farm.biosecurity_score
         return 75
@@ -139,14 +152,19 @@ class RiskEngine:
         )
 
     @staticmethod
+    def incident_factor_ref(incident_id: str) -> str:
+        return f"|ref:{incident_id}|"
+
+    @staticmethod
     def deactivate_incident_factors(db: Session, farm_id: str, incident_id: str) -> None:
+        ref = RiskEngine.incident_factor_ref(incident_id)
         prefix = f"Incident [{incident_id}]:"
         factors = (
             db.query(RiskFactor)
             .filter(
                 RiskFactor.farm_id == farm_id,
                 RiskFactor.is_active.is_(True),
-                RiskFactor.label.like(f"{prefix}%"),
+                (RiskFactor.label.like(f"{prefix}%")) | (RiskFactor.description.contains(ref)),
             )
             .all()
         )
@@ -162,8 +180,23 @@ class RiskEngine:
                         RiskFactor.label == legacy_label,
                         RiskFactor.category == RiskFactorCategory.INCIDENT,
                     )
+                    .order_by(RiskFactor.created_at.desc())
+                    .limit(1)
                     .all()
                 )
+        if not factors:
+            factors = (
+                db.query(RiskFactor)
+                .filter(
+                    RiskFactor.farm_id == farm_id,
+                    RiskFactor.is_active.is_(True),
+                    RiskFactor.category == RiskFactorCategory.INCIDENT,
+                    RiskFactor.label.like("Incident [%"),
+                )
+                .order_by(RiskFactor.created_at.desc())
+                .limit(1)
+                .all()
+            )
         for factor in factors:
             factor.is_active = False
         db.flush()

@@ -85,13 +85,16 @@ class IncidentService:
                     )
                 )
 
+        factor_desc = (
+            f"{payload.description[:220]}{RiskEngine.incident_factor_ref(incident.id)}"
+        )
         RiskEngine.add_factor(
             db,
             farm.id,
             RiskEngine.incident_factor_label(incident.id, payload.incident_type),
             RiskEngine.incident_penalty(severity),
             RiskFactorCategory.INCIDENT,
-            payload.description[:250],
+            factor_desc,
         )
         old_score = RiskEngine.recalculate_farm(db, farm)
         RiskEngine.update_farm_counters(db, farm)

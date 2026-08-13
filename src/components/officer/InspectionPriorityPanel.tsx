@@ -4,6 +4,7 @@ import type { Farm, CorrectiveAction, IncidentReport } from "../../types";
 import { officerService, correctiveActionService, incidentService } from "../../services/api";
 import { StatusBadge } from "../common/StatusBadge";
 import { ScheduleInspectionModal } from "./ScheduleInspectionModal";
+import { OfficerFarmDetailModal } from "./OfficerFarmDetailModal";
 import { useTranslation } from "../../context/LocaleContext";
 
 type SortKey = "priority" | "risk" | "incidents" | "compliance";
@@ -64,6 +65,7 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [scheduleFarm, setScheduleFarm] = useState<Farm | null>(null);
+  const [detailFarm, setDetailFarm] = useState<Farm | null>(null);
 
   const [filterRisk, setFilterRisk] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
@@ -146,6 +148,7 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
         <div>
           <span className="panel-eyebrow">{t("officer.priority.title")}</span>
           <p className="panel-sub">{t("officer.priority.subtitle")}</p>
+          <p className="panel-sub officer-click-hint">{t("officer.detail.clickHint")}</p>
         </div>
       </div>
 
@@ -185,7 +188,11 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
           {filtered.map(({ farm, rank, reasons }) => (
             <div
               key={farm.id}
-              className={`priority-farm-card ${rank === 1 ? "priority-top" : ""}`}
+              className={`priority-farm-card priority-farm-card-clickable ${rank === 1 ? "priority-top" : ""}`}
+              onClick={() => setDetailFarm(farm)}
+              onKeyDown={(e) => e.key === "Enter" && setDetailFarm(farm)}
+              role="button"
+              tabIndex={0}
             >
               <div className="priority-card-header">
                 <span className="priority-rank-badge">
@@ -221,7 +228,10 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
 
               <button
                 className="btn-table-audit"
-                onClick={() => setScheduleFarm(farm)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setScheduleFarm(farm);
+                }}
               >
                 <Calendar size={14} />
                 {t("officer.priority.schedule")}
@@ -235,6 +245,12 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
         isOpen={!!scheduleFarm}
         onClose={() => setScheduleFarm(null)}
         onScheduled={onScheduleSuccess}
+      />
+      <OfficerFarmDetailModal
+        farm={detailFarm}
+        isOpen={!!detailFarm}
+        onClose={() => setDetailFarm(null)}
+        onSchedule={(farm) => setScheduleFarm(farm)}
       />
     </div>
   );
