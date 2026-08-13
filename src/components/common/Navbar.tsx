@@ -81,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
             >
               {allFarms.map((farm) => (
                 <option key={farm.id} value={farm.id}>
-                  {farm.name} ({farm.farmType.toUpperCase()})
+                  {farm.name} — {farm.location} ({farm.farmType.toUpperCase()})
                 </option>
               ))}
             </select>
