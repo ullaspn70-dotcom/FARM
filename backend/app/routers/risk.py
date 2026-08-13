@@ -21,7 +21,9 @@ def get_risk_factors(
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
     if farm_id:
-        FarmService.get_farm(db, farm_id, current_user)
+        farm = FarmService.get_farm(db, farm_id, current_user)
+        RiskEngine.recalculate_farm(db, farm)
+        db.commit()
     factors = RiskEngine.get_factors(db, farm_id)
     return [risk_factor_to_response(f) for f in factors]
 
@@ -45,6 +47,9 @@ def get_risk_summary(
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
     farm = FarmService.get_farm(db, farm_id, current_user)
+    RiskEngine.recalculate_farm(db, farm)
+    db.commit()
+    db.refresh(farm)
     return RiskEngine.get_summary(db, farm)
 
 
