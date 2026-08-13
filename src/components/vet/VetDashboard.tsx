@@ -7,6 +7,31 @@ import { StatusBadge } from "../common/StatusBadge";
 import { EvidencePreview } from "../common/EvidencePreview";
 import { VeterinaryActionPlanBuilder } from "./VeterinaryActionPlanBuilder";
 
+const VET_INCIDENT_STATUS_ORDER: Record<string, number> = {
+  Reported: 0,
+  "Under Review": 1,
+  "More Info Required": 2,
+  Verified: 3,
+  Rejected: 4,
+};
+
+function isPendingIncident(inc: IncidentReport): boolean {
+  return (
+    inc.status === "Reported" ||
+    inc.status === "Under Review" ||
+    inc.status === "More Info Required"
+  );
+}
+
+function sortIncidentsForVetQueue(list: IncidentReport[]): IncidentReport[] {
+  return [...list].sort((a, b) => {
+    const sa = VET_INCIDENT_STATUS_ORDER[a.status] ?? 99;
+    const sb = VET_INCIDENT_STATUS_ORDER[b.status] ?? 99;
+    if (sa !== sb) return sa - sb;
+    return b.dateTime.localeCompare(a.dateTime);
+  });
+}
+
 export const VetDashboard: React.FC = () => {
   const { refreshFarms } = useAuth();
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
@@ -21,17 +46,27 @@ export const VetDashboard: React.FC = () => {
   const [riskFactors, setRiskFactors] = useState<RiskFactor[]>([]);
   const [spatialNote, setSpatialNote] = useState<string>("");
 
-  const fetchIncidents = async () => {
+  const fetchIncidents = async (preferIncidentId?: string) => {
     setLoading(true);
     try {
-      const list = await incidentService.getIncidents();
+      const list = sortIncidentsForVetQueue(await incidentService.getIncidents());
       setIncidents(list);
       if (list.length > 0) {
-        setSelectedIncident((prev) => prev ?? list[0]);
+        setSelectedIncident((prev) => {
+          const keepId = preferIncidentId ?? prev?.id;
+          if (keepId) {
+            const found = list.find((i) => i.id === keepId);
+            if (found) return found;
+          }
+          return list.find(isPendingIncident) ?? list[0];
+        });
+      } else {
+        setSelectedIncident(null);
       }
     } catch (err) {
       console.error(err);
       setIncidents([]);
+      setSelectedIncident(null);
     } finally {
       setLoading(false);
     }
@@ -89,7 +124,11 @@ export const VetDashboard: React.FC = () => {
       } else {
         setActionSuccess("Incident rejected. Risk factor removed and score recalculated.");
       }
-      await fetchIncidents();
+      await fetchIncidents(
+        action === "validate" || action === "reject"
+          ? undefined
+          : updated.id
+      );
       await refreshFarms();
       const summary = await riskService.getRiskSummary(updated.farmId);
       setRiskSummary(summary);
@@ -110,6 +149,35 @@ export const VetDashboard: React.FC = () => {
   const pendingCount = incidents.filter(
     (i) => i.status === "Reported" || i.status === "Under Review" || i.status === "More Info Required"
   ).length;
+
+  const pendingIncidents = incidents.filter(isPendingIncident);
+  const closedIncidents = incidents.filter((i) => !isPendingIncident(i));
+
+  const renderIncidentCard = (inc: IncidentReport) => (
+    <div
+      key={inc.id}
+      className={`queue-item-card ${selectedIncident?.id === inc.id ? "selected" : ""} ${
+        isPendingIncident(inc) ? "queue-item-pending" : "queue-item-closed"
+      }`}
+      onClick={() => {
+        setSelectedIncident(inc);
+        setActionNotes("");
+        setActionError(null);
+        setActionSuccess(null);
+      }}
+    >
+      <div className="item-top">
+        <span className="inc-id">{inc.id}</span>
+        <StatusBadge type="incident" value={inc.status} size="sm" />
+      </div>
+      <strong className="inc-type">{inc.incidentType}</strong>
+      <p className="inc-farm-name">{inc.farmName}</p>
+      <div className="item-meta">
+        <span>{inc.numberAffected} Affected</span>
+        <span>{inc.dateTime}</span>
+      </div>
+    </div>
+  );
 
   return (
     <div className="vet-dashboard-view">
@@ -147,29 +215,20 @@ export const VetDashboard: React.FC = () => {
             <div className="empty-state">No incidents currently reported.</div>
           ) : (
             <div className="queue-items-scroll">
-              {incidents.map((inc) => (
-                <div
-                  key={inc.id}
-                  className={`queue-item-card ${selectedIncident?.id === inc.id ? "selected" : ""}`}
-                  onClick={() => {
-                    setSelectedIncident(inc);
-                    setActionNotes("");
-                    setActionError(null);
-                    setActionSuccess(null);
-                  }}
-                >
-                  <div className="item-top">
-                    <span className="inc-id">{inc.id}</span>
-                    <StatusBadge type="incident" value={inc.status} size="sm" />
-                  </div>
-                  <strong className="inc-type">{inc.incidentType}</strong>
-                  <p className="inc-farm-name">{inc.farmName}</p>
-                  <div className="item-meta">
-                    <span>{inc.numberAffected} Affected</span>
-                    <span>{inc.dateTime}</span>
-                  </div>
-                </div>
-              ))}
+              {pendingIncidents.length > 0 && (
+                <>
+                  <p className="queue-section-label">New &amp; pending review</p>
+                  {pendingIncidents.map(renderIncidentCard)}
+                </>
+              )}
+              {closedIncidents.length > 0 && (
+                <>
+                  <p className="queue-section-label queue-section-closed">
+                    Verified &amp; rejected (archived)
+                  </p>
+                  {closedIncidents.map(renderIncidentCard)}
+                </>
+              )}
             </div>
           )}
         </div>
