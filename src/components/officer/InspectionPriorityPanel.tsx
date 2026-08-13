@@ -3,6 +3,7 @@ import { HelpCircle, Calendar } from "lucide-react";
 import type { Farm, CorrectiveAction, IncidentReport } from "../../types";
 import { officerService, correctiveActionService, incidentService } from "../../services/api";
 import { StatusBadge } from "../common/StatusBadge";
+import { ScheduleInspectionModal } from "./ScheduleInspectionModal";
 import { useTranslation } from "../../context/LocaleContext";
 
 type SortKey = "priority" | "risk" | "incidents" | "compliance";
@@ -62,7 +63,7 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
   const [actions, setActions] = useState<CorrectiveAction[]>([]);
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [scheduling, setScheduling] = useState<string | null>(null);
+  const [scheduleFarm, setScheduleFarm] = useState<Farm | null>(null);
 
   const [filterRisk, setFilterRisk] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
@@ -134,18 +135,6 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
 
     return list;
   }, [enrichedFarms, filterRisk, filterType, filterIncident, filterAction, sortKey, incidents, actions]);
-
-  const handleSchedule = async (farmId: string) => {
-    setScheduling(farmId);
-    try {
-      await officerService.scheduleInspection(farmId, "Scheduled from priority queue");
-      onScheduleSuccess?.();
-    } catch {
-      // keep UI stable
-    } finally {
-      setScheduling(null);
-    }
-  };
 
   if (loading) {
     return <div className="loading-state">{t("common.loading")}</div>;
@@ -232,16 +221,21 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
 
               <button
                 className="btn-table-audit"
-                disabled={scheduling === farm.id}
-                onClick={() => handleSchedule(farm.id)}
+                onClick={() => setScheduleFarm(farm)}
               >
                 <Calendar size={14} />
-                {scheduling === farm.id ? t("common.loading") : t("officer.priority.schedule")}
+                {t("officer.priority.schedule")}
               </button>
             </div>
           ))}
         </div>
       )}
+      <ScheduleInspectionModal
+        farm={scheduleFarm}
+        isOpen={!!scheduleFarm}
+        onClose={() => setScheduleFarm(null)}
+        onScheduled={onScheduleSuccess}
+      />
     </div>
   );
 };

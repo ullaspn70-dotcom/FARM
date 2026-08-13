@@ -225,10 +225,14 @@ export const officerService = {
     return apiFetch<Farm[]>("/officer/inspection-priority");
   },
 
-  async scheduleInspection(farmId: string, notes?: string): Promise<{ id: string }> {
+  async scheduleInspection(
+    farmId: string,
+    scheduledAt: string,
+    notes?: string
+  ): Promise<{ id: string }> {
     return apiFetch<{ id: string }>("/officer/inspections", {
       method: "POST",
-      body: JSON.stringify({ farmId, notes }),
+      body: JSON.stringify({ farmId, scheduledAt, notes }),
     });
   },
 };

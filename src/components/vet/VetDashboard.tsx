@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Stethoscope, CheckCircle, HelpCircle, XCircle, Image, MapPin } from "lucide-react";
+import { Stethoscope, CheckCircle, HelpCircle, XCircle, Image, MapPin, ExternalLink } from "lucide-react";
 import type { IncidentReport } from "../../types";
 import { incidentService } from "../../services/api";
 import { StatusBadge } from "../common/StatusBadge";
+import { isImageFile, resolveMediaUrl } from "../../utils/mediaUrl";
 
 export const VetDashboard: React.FC = () => {
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
@@ -187,15 +188,47 @@ export const VetDashboard: React.FC = () => {
               <h4 className="section-title">Submitted Diagnostic Evidence</h4>
               {selectedIncident.evidenceFiles.length > 0 ? (
                 <div className="evidence-preview-list">
-                  {selectedIncident.evidenceFiles.map((file, idx) => (
-                    <div key={idx} className="evidence-file-card">
-                      <Image size={24} className="file-icon" />
-                      <div>
-                        <strong className="file-name">{file.name}</strong>
-                        <span className="file-time">{file.timestamp}</span>
+                  {selectedIncident.evidenceFiles.map((file, idx) => {
+                    const mediaUrl = resolveMediaUrl(file.url);
+                    const showImage = mediaUrl && isImageFile(file.name || mediaUrl);
+                    return (
+                      <div key={idx} className="evidence-file-card evidence-file-card-rich">
+                        {showImage ? (
+                          <a
+                            href={mediaUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="evidence-thumb-link"
+                          >
+                            <img
+                              src={mediaUrl}
+                              alt={file.name}
+                              className="evidence-thumb-image"
+                            />
+                          </a>
+                        ) : (
+                          <Image size={24} className="file-icon" />
+                        )}
+                        <div className="evidence-file-meta">
+                          <strong className="file-name">{file.name}</strong>
+                          <span className="file-time">{file.timestamp}</span>
+                          {mediaUrl ? (
+                            <a
+                              href={mediaUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="evidence-open-link"
+                            >
+                              <ExternalLink size={14} />
+                              Open evidence file
+                            </a>
+                          ) : (
+                            <span className="text-muted">File URL unavailable</span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-muted">No evidence media uploaded with initial report.</p>

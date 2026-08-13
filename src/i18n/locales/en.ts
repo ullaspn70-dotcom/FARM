@@ -219,6 +219,20 @@ const en: TranslationDictionary = {
   "officer.priority.reason.spatial": "Nearby high-risk farms in area",
   "officer.priority.empty": "No farms match the selected filters.",
 
+  "officer.schedule.eyebrow": "GOVERNMENT FIELD COMMAND",
+  "officer.schedule.title": "Schedule Biosecurity Inspection",
+  "officer.schedule.farm": "Farm",
+  "officer.schedule.date": "Inspection date",
+  "officer.schedule.notes": "Officer notes (optional)",
+  "officer.schedule.notesPlaceholder": "e.g. Routine district audit, follow-up on open incident...",
+  "officer.schedule.submit": "Schedule & Notify Farm",
+  "officer.schedule.success": "Inspection scheduled. The farmer will receive a notification.",
+  "officer.schedule.error": "Could not schedule inspection. Please try again.",
+  "officer.schedule.dateRequired": "Please select an inspection date.",
+
+  "vet.evidence.open": "Open evidence file",
+  "vet.evidence.unavailable": "File URL unavailable",
+
   "gis.filters": "Map Filters",
   "gis.farmType": "Farm Type",
   "gis.riskLevel": "Risk Level",

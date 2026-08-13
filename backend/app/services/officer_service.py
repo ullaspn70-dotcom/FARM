@@ -204,9 +204,12 @@ class InspectionService:
         NotificationService.create(
             db,
             title="Inspection Scheduled",
-            message=f"Routine biosecurity inspection assigned for {farm.name}.",
+            message=(
+                f"Government biosecurity inspection scheduled for {farm.name} "
+                f"on {scheduled_at.strftime('%d %b %Y')}."
+            ),
             notification_type=NotificationType.INSPECTION,
-            target_role=UserRole.OFFICER,
+            target_role=UserRole.FARMER,
         )
         db.commit()
         db.refresh(inspection)
