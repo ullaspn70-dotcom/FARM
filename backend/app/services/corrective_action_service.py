@@ -36,6 +36,22 @@ class CorrectiveActionService:
         return query.all()
 
     @staticmethod
+    def list_awaiting_evidence(db: Session, user: User | None = None) -> list[CorrectiveAction]:
+        query = (
+            db.query(CorrectiveAction)
+            .filter(
+                CorrectiveAction.status.in_([
+                    CorrectiveActionStatus.EVIDENCE_SUBMITTED,
+                    CorrectiveActionStatus.AWAITING_VERIFICATION,
+                ])
+            )
+            .order_by(CorrectiveAction.updated_at.desc())
+        )
+        if user and user.district_id and user.role != UserRole.OFFICER:
+            query = query.join(CorrectiveAction.farm).filter_by(district_id=user.district_id)
+        return query.all()
+
+    @staticmethod
     def get_action(db: Session, action_id: str, user: User | None = None) -> CorrectiveAction:
         action = db.query(CorrectiveAction).filter(CorrectiveAction.id == action_id).first()
         if not action:
@@ -79,8 +95,8 @@ class CorrectiveActionService:
         user: User | None,
     ) -> CorrectiveAction:
         action = CorrectiveActionService.get_action(db, action_id, user)
-        if action.status == CorrectiveActionStatus.VERIFIED:
-            raise ConflictError("Action is already verified.")
+        if action.status in (CorrectiveActionStatus.VERIFIED, CorrectiveActionStatus.CLOSED):
+            raise ConflictError("Action is already closed.")
 
         if action.evidence:
             db.delete(action.evidence)
@@ -96,15 +112,24 @@ class CorrectiveActionService:
             captured_at=datetime.now(timezone.utc),
         )
         db.add(evidence)
-        action.status = CorrectiveActionStatus.EVIDENCE_SUBMITTED
+        action.status = CorrectiveActionStatus.AWAITING_VERIFICATION
         action.verification_status = VerificationStatus.VERIFICATION_PENDING
 
         NotificationService.create(
             db,
-            title="Evidence Submitted",
-            message=f"Evidence submitted for {action.title}. Awaiting officer verification.",
+            title="Evidence Awaiting Inspection",
+            message=f"Evidence submitted for '{action.title}' at {action.farm.name}. Review required.",
             notification_type=NotificationType.EVIDENCE,
             target_role=UserRole.VETERINARIAN,
+            action_url="/actions",
+        )
+        NotificationService.create(
+            db,
+            title="Evidence Submitted",
+            message=f"Your evidence for '{action.title}' is awaiting veterinary verification.",
+            notification_type=NotificationType.EVIDENCE,
+            target_role=UserRole.FARMER,
+            action_url="/actions",
         )
         db.commit()
         db.refresh(action)
@@ -120,18 +145,50 @@ class CorrectiveActionService:
             raise ConflictError("Action is not awaiting verification.")
 
         farm = action.farm
+        vet_name = user.full_name if user else "District Veterinary Officer"
+
         if payload.approved:
-            action.status = CorrectiveActionStatus.VERIFIED
+            action.status = CorrectiveActionStatus.CLOSED
             action.verification_status = VerificationStatus.VERIFIED
+            if action.evidence and payload.notes:
+                action.evidence.notes = (
+                    f"{action.evidence.notes or ''}\n\nVeterinary verification: {payload.notes}".strip()
+                )
             if action.incident_id:
                 RiskEngine.update_incident_factor_progress(db, action.incident_id)
             old_score = RiskEngine.recalculate_farm(db, farm)
             RiskEngine.update_farm_counters(db, farm)
             RiskEngine.notify_score_change(db, farm, old_score)
             CorrectiveActionService._check_compliance_closure(db, action.farm_id)
+            NotificationService.create(
+                db,
+                title="Corrective Action Verified",
+                message=(
+                    f"'{action.title}' verified by {vet_name}. "
+                    f"Biosecurity score: {farm.biosecurity_score}/100."
+                ),
+                notification_type=NotificationType.CORRECTIVE,
+                target_role=UserRole.FARMER,
+                action_url="/actions",
+            )
         else:
             action.status = CorrectiveActionStatus.IN_PROGRESS
             action.verification_status = VerificationStatus.UNVERIFIED
+            if action.evidence and payload.notes:
+                action.evidence.notes = (
+                    f"{action.evidence.notes or ''}\n\nVeterinary rejection: {payload.notes}".strip()
+                )
+            NotificationService.create(
+                db,
+                title="Evidence Requires Resubmission",
+                message=(
+                    f"Evidence for '{action.title}' was not accepted. "
+                    f"{payload.notes or 'Please upload clearer evidence.'}"
+                ),
+                notification_type=NotificationType.EVIDENCE,
+                target_role=UserRole.FARMER,
+                action_url="/actions",
+            )
 
         db.commit()
         db.refresh(action)

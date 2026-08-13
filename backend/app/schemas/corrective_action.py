@@ -15,6 +15,7 @@ class CorrectiveActionResponse(CamelModel):
     id: str
     farm_id: str = Field(serialization_alias="farmId")
     farm_name: str = Field(serialization_alias="farmName")
+    incident_id: str | None = Field(default=None, serialization_alias="incidentId")
     title: str
     description: str
     priority: str

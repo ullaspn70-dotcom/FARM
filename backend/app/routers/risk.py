@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_optional_user
 from app.database.session import get_db
 from app.models.user import User
-from app.schemas.risk import RiskFactorResponse, RiskHistoryPoint, RiskSummaryResponse
+from app.schemas.risk import RiskFactorResponse, RiskHistoryPoint, RiskSummaryResponse, ScoreTimelineEvent, ScoreTimelineEvent
 from app.services.farm_service import FarmService
 from app.services.risk_service import RiskEngine
 from app.utils.serializers import risk_factor_to_response, risk_history_to_response
@@ -51,6 +51,17 @@ def get_risk_summary(
     db.commit()
     db.refresh(farm)
     return RiskEngine.get_summary(db, farm)
+
+
+@router.get("/farms/{farm_id}/timeline", response_model=list[ScoreTimelineEvent])
+def get_score_timeline(
+    farm_id: str,
+    days: int = Query(default=30, ge=1, le=90),
+    db: Session = Depends(get_db),
+    current_user: Annotated[User | None, Depends(get_optional_user)] = None,
+):
+    FarmService.get_farm(db, farm_id, current_user)
+    return RiskEngine.get_score_timeline(db, farm_id, days)
 
 
 @router.post("/farms/{farm_id}/recalculate", response_model=RiskSummaryResponse)

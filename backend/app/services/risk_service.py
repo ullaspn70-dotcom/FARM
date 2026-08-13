@@ -70,6 +70,120 @@ class RiskEngine:
         return 75
 
     @staticmethod
+    def confirm_verified_incident(db: Session, incident: Incident) -> None:
+        """Increase penalty when an incident is veterinary-confirmed (score must not improve)."""
+        factor = RiskEngine.find_incident_factor(db, incident.farm_id, incident.id)
+        if not factor:
+            return
+        base = RiskEngine.incident_penalty(incident.severity)
+        confirmed_delta = min(25, base + max(4, round(base * 0.5)))
+        if confirmed_delta > factor.delta:
+            factor.delta = confirmed_delta
+            factor.description = (
+                f"{factor.description.split('|ref:')[0].strip()} "
+                f"[Veterinary-confirmed]|ref:{incident.id}|"
+            )
+        db.flush()
+
+    @staticmethod
+    def get_score_timeline(db: Session, farm_id: str, days: int = 30) -> list[dict]:
+        from app.models.corrective_action import CorrectiveAction
+        from app.models.incident import Incident
+
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        events: list[dict] = []
+
+        incidents = (
+            db.query(Incident)
+            .filter(Incident.farm_id == farm_id, Incident.created_at >= since)
+            .order_by(Incident.created_at.asc())
+            .all()
+        )
+        for inc in incidents:
+            score = RiskEngine._score_near(db, farm_id, inc.created_at)
+            events.append({
+                "time": inc.created_at.isoformat(),
+                "event_type": "incident_reported",
+                "label": f"Incident reported: {inc.incident_type}",
+                "score": score,
+                "reference_id": inc.id,
+            })
+            if inc.verified_at and inc.status.value == "Verified":
+                score = RiskEngine._score_near(db, farm_id, inc.verified_at)
+                events.append({
+                    "time": inc.verified_at.isoformat(),
+                    "event_type": "incident_verified",
+                    "label": "Incident verified — risk recalculated",
+                    "score": score,
+                    "reference_id": inc.id,
+                })
+
+        actions = (
+            db.query(CorrectiveAction)
+            .filter(CorrectiveAction.farm_id == farm_id, CorrectiveAction.created_at >= since)
+            .order_by(CorrectiveAction.created_at.asc())
+            .all()
+        )
+        for act in actions:
+            score = RiskEngine._score_near(db, farm_id, act.created_at)
+            events.append({
+                "time": act.created_at.isoformat(),
+                "event_type": "action_assigned",
+                "label": f"Corrective action assigned: {act.title}",
+                "score": score,
+                "reference_id": act.id,
+            })
+            if act.evidence and act.evidence.submitted_at:
+                score = RiskEngine._score_near(db, farm_id, act.evidence.submitted_at)
+                events.append({
+                    "time": act.evidence.submitted_at.isoformat(),
+                    "event_type": "evidence_submitted",
+                    "label": f"Evidence submitted: {act.title}",
+                    "score": score,
+                    "reference_id": act.id,
+                })
+            if act.status.value in ("Verified", "Closed"):
+                score = RiskEngine._score_near(db, farm_id, act.updated_at)
+                events.append({
+                    "time": act.updated_at.isoformat(),
+                    "event_type": "action_closed",
+                    "label": f"Corrective action verified & closed: {act.title}",
+                    "score": score,
+                    "reference_id": act.id,
+                })
+
+        events.sort(key=lambda e: e["time"])
+        if not events:
+            farm = db.query(Farm).filter(Farm.id == farm_id).first()
+            if farm:
+                events.append({
+                    "time": datetime.now(timezone.utc).isoformat(),
+                    "event_type": "current",
+                    "label": "Current biosecurity score",
+                    "score": farm.biosecurity_score,
+                    "reference_id": farm_id,
+                })
+        return events
+
+    @staticmethod
+    def _score_near(db: Session, farm_id: str, moment: datetime) -> int:
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=timezone.utc)
+        point = (
+            db.query(RiskScoreHistory)
+            .filter(
+                RiskScoreHistory.farm_id == farm_id,
+                RiskScoreHistory.recorded_at <= moment,
+            )
+            .order_by(RiskScoreHistory.recorded_at.desc())
+            .first()
+        )
+        if point:
+            return point.score
+        farm = db.query(Farm).filter(Farm.id == farm_id).first()
+        return farm.biosecurity_score if farm else 0
+
+    @staticmethod
     def record_history(db: Session, farm_id: str, score: int) -> None:
         db.add(
             RiskScoreHistory(

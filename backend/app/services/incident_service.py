@@ -3,11 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, NotFoundError, ValidationAppError
-from app.models.corrective_action import CorrectiveAction
 from app.models.enums import (
-    ActionPriority,
-    CorrectiveActionStatus,
-    IncidentSeverity,
     IncidentStatus,
     NotificationType,
     RiskFactorCategory,
@@ -107,6 +103,17 @@ class IncidentService:
             notification_type=NotificationType.INCIDENT,
             broadcast_all=True,
         )
+        NotificationService.create(
+            db,
+            title="Incident Submitted — Pending Veterinary Verification",
+            message=(
+                f"Your {payload.incident_type} report ({incident.id}) is awaiting "
+                "veterinary review."
+            ),
+            notification_type=NotificationType.INCIDENT,
+            target_role=UserRole.FARMER,
+            action_url="/incident",
+        )
         db.commit()
         db.refresh(incident)
         return incident
@@ -129,7 +136,7 @@ class IncidentService:
             incident.verified_at = datetime.now(timezone.utc)
             incident.verified_by_id = user.id if user else None
             incident.verified_by_name = user.full_name if user else "District Veterinary Officer"
-            IncidentService._generate_corrective_actions(db, incident)
+            RiskEngine.confirm_verified_incident(db, incident)
             title = "Incident Verified"
         elif action == "request_info":
             incident.status = IncidentStatus.MORE_INFO_REQUIRED
@@ -151,50 +158,40 @@ class IncidentService:
             farm = incident.farm
             old_score = RiskEngine.recalculate_farm(db, farm)
             RiskEngine.update_farm_counters(db, farm)
-            if farm.biosecurity_score != old_score:
-                RiskEngine.notify_score_change(db, farm, old_score)
+            RiskEngine.notify_score_change(db, farm, old_score)
+            NotificationService.create(
+                db,
+                title="Incident Verified by Veterinarian",
+                message=(
+                    f"Incident {incident.id} has been verified. "
+                    f"Biosecurity score updated to {farm.biosecurity_score}/100. "
+                    "Awaiting veterinary action plan."
+                ),
+                notification_type=NotificationType.VERIFICATION,
+                target_role=UserRole.FARMER,
+                action_url="/risk",
+            )
+            NotificationService.create(
+                db,
+                title="Verified Incident — Action Plan Required",
+                message=f"Incident {incident.id} at {farm.name} verified. Create and send action plan.",
+                notification_type=NotificationType.CORRECTIVE,
+                target_role=UserRole.VETERINARIAN,
+                action_url="/incident",
+            )
         elif action != "reject":
             farm = incident.farm
             RiskEngine.update_farm_counters(db, farm)
 
-        NotificationService.create(
-            db,
-            title=title,
-            message=f"Incident {incident.id} update by Veterinarian Officer.",
-            notification_type=NotificationType.VERIFICATION,
-            target_role=UserRole.FARMER,
-        )
+        if action != "validate":
+            NotificationService.create(
+                db,
+                title=title,
+                message=f"Incident {incident.id} update by Veterinarian Officer.",
+                notification_type=NotificationType.VERIFICATION,
+                target_role=UserRole.FARMER,
+            )
         db.commit()
         db.refresh(incident)
         return incident
 
-    @staticmethod
-    def _generate_corrective_actions(db: Session, incident: Incident) -> None:
-        farm = incident.farm
-        actions = [
-            (
-                "Sanitize & Decontaminate Affected Zone",
-                f"Apply recommended disinfectant in {incident.location}.",
-                ActionPriority.HIGH,
-            ),
-            (
-                "Submit Mortality & Health Observation Log",
-                "Upload updated mortality and morbidity records for veterinary audit.",
-                ActionPriority.URGENT,
-            ),
-        ]
-        for title, description, priority in actions:
-            db.add(
-                CorrectiveAction(
-                    id=generate_id("ACT"),
-                    farm_id=farm.id,
-                    incident_id=incident.id,
-                    title=title,
-                    description=description,
-                    priority=priority,
-                    assigned_person=farm.owner_name,
-                    deadline=datetime.now(timezone.utc).date(),
-                    status=CorrectiveActionStatus.PENDING,
-                    evidence_required=True,
-                )
-            )

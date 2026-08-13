@@ -16,6 +16,14 @@ class RiskHistoryPoint(CamelModel):
     score: int
 
 
+class ScoreTimelineEvent(CamelModel):
+    time: str
+    event_type: str = Field(serialization_alias="eventType")
+    label: str
+    score: int
+    reference_id: str = Field(serialization_alias="referenceId")
+
+
 class RiskSummaryResponse(CamelModel):
     farm_id: str = Field(serialization_alias="farmId")
     biosecurity_score: int = Field(serialization_alias="biosecurityScore")

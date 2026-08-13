@@ -83,6 +83,7 @@ def action_to_response(action: CorrectiveAction, db: Session | None = None) -> C
         id=action.id,
         farm_id=action.farm_id,
         farm_name=action.farm.name if action.farm else "",
+        incident_id=action.incident_id,
         title=action.title,
         description=action.description,
         priority=action.priority.value,

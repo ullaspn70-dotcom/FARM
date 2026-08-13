@@ -3,10 +3,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_optional_user
+from app.core.dependencies import get_optional_user, require_roles
 from app.database.session import get_db
+from app.models.enums import UserRole
 from app.models.user import User
+from app.schemas.action_plan import (
+    ActionPlanSendRequest,
+    ActionPlanSendResponse,
+    RecommendedActionResponse,
+)
 from app.schemas.incident import IncidentCreate, IncidentResponse, IncidentVerifyRequest
+from app.services.action_plan_service import ActionPlanService
 from app.services.file_service import save_upload_file
 from app.services.incident_service import IncidentService
 from app.utils.serializers import incident_to_response
@@ -80,7 +87,31 @@ def verify_incident(
     incident_id: str,
     payload: IncidentVerifyRequest,
     db: Session = Depends(get_db),
-    current_user: Annotated[User | None, Depends(get_optional_user)] = None,
+    current_user: Annotated[User | None, Depends(require_roles(UserRole.VETERINARIAN, UserRole.OFFICER))] = None,
 ):
     incident = IncidentService.verify_incident(db, incident_id, payload, current_user)
     return incident_to_response(incident, db)
+
+
+@router.get("/{incident_id}/recommended-actions", response_model=list[RecommendedActionResponse])
+def get_recommended_actions(
+    incident_id: str,
+    db: Session = Depends(get_db),
+    current_user: Annotated[User | None, Depends(require_roles(UserRole.VETERINARIAN, UserRole.OFFICER))] = None,
+):
+    return ActionPlanService.get_recommended(db, incident_id, current_user)
+
+
+@router.post("/{incident_id}/action-plan", response_model=ActionPlanSendResponse)
+def send_action_plan(
+    incident_id: str,
+    payload: ActionPlanSendRequest,
+    db: Session = Depends(get_db),
+    current_user: Annotated[User | None, Depends(require_roles(UserRole.VETERINARIAN, UserRole.OFFICER))] = None,
+):
+    created, count = ActionPlanService.send_plan(db, incident_id, payload, current_user)
+    return ActionPlanSendResponse(
+        incident_id=incident_id,
+        actions_created=count,
+        action_ids=[a.id for a in created],
+    )

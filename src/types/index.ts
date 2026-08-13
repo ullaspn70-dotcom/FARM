@@ -142,6 +142,33 @@ export interface RiskSummary {
   riskTrend: "improving" | "stable" | "deteriorating";
 }
 
+export interface ScoreTimelineEvent {
+  time: string;
+  eventType: string;
+  label: string;
+  score: number;
+  referenceId: string;
+}
+
+export interface RecommendedAction {
+  key: string;
+  title: string;
+  description: string;
+  priority: "low" | "medium" | "high" | "urgent";
+  evidenceRequired: boolean;
+  selected: boolean;
+}
+
+export interface ActionPlanItem {
+  title: string;
+  description: string;
+  priority: string;
+  assignedPerson?: string;
+  deadline: string;
+  evidenceRequired: boolean;
+  veterinaryNote?: string;
+}
+
 export interface SpatialRiskFarm {
   id: string;
   name: string;

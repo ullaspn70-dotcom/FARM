@@ -1672,3 +1672,27 @@
   text-decoration: none;
 }
 .evidence-open-link:hover { text-decoration: underline; }
+
+/* Workflow: action plan + evidence inspection + score timeline */
+.action-plan-builder { border-top: 1px solid #E2E8F0; padding-top: 16px; }
+.section-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.action-plan-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; padding: 12px; border: 1px solid #E2E8F0; border-radius: 10px; margin-bottom: 10px; background: #F8FAFC; }
+.action-plan-row.selected { border-color: #154D38; background: #F0FDF4; }
+.action-plan-fields { display: flex; flex-direction: column; gap: 8px; }
+.action-plan-meta-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.action-plan-toolbar { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.risk-context-banner { display: flex; gap: 12px; align-items: flex-start; background: #FEF3C7; border: 1px solid #FDE68A; padding: 12px 16px; border-radius: 10px; }
+.risk-factor-mini-list { margin: 0; padding-left: 18px; font-size: 14px; }
+.evidence-inspection-panel { background: #fff; border: 1px solid #E2E8F0; border-radius: 14px; padding: 24px; margin-top: 8px; }
+.evidence-inspection-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
+.evidence-queue-mini { display: flex; flex-direction: column; gap: 8px; }
+.queue-item-card.compact { padding: 10px; text-align: left; }
+.evidence-inspection-detail { display: flex; flex-direction: column; gap: 12px; }
+.evidence-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 13px; margin-top: 10px; }
+.score-timeline-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid #E2E8F0; }
+.score-timeline-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.score-timeline-list li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; background: #F8FAFC; border-radius: 8px; border-left: 3px solid #154D38; }
+.timeline-score { font-weight: 800; font-size: 18px; color: #154D38; min-width: 36px; }
+.timeline-time { display: block; font-size: 12px; color: #64748B; margin-top: 2px; }
+.timeline-incident_verified { border-left-color: #DC2626; }
+.timeline-action_closed { border-left-color: #16A34A; }

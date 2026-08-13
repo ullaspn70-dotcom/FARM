@@ -41,10 +41,14 @@ export const CorrectiveActionsList: React.FC = () => {
     fetchActions();
   }, [role, activeFarm.id]);
 
-  const handleVerify = async (actionId: string, approve: boolean) => {
+  const handleVerify = async (actionId: string, approve: boolean, notes?: string) => {
     try {
-      await correctiveActionService.verifyAction(actionId, approve);
-      await riskService.recalculateFarm(activeFarm.id).catch(() => undefined);
+      const action = actions.find((a) => a.id === actionId);
+      await correctiveActionService.verifyAction(actionId, approve, notes);
+      const farmId = role === "farmer" ? activeFarm.id : action?.farmId;
+      if (farmId) {
+        await riskService.recalculateFarm(farmId).catch(() => undefined);
+      }
       await fetchActions();
       await refreshFarms();
     } catch (err) {
@@ -137,7 +141,9 @@ export const CorrectiveActionsList: React.FC = () => {
                       )}
                     </td>
                     <td className="cell-buttons">
-                      {role === "farmer" && act.status !== "Verified" && (
+                      {role === "farmer" &&
+                        act.status !== "Verified" &&
+                        act.status !== "Closed" && (
                         <button
                           className="btn-upload-evidence"
                           onClick={() => setSelectedActionForEvidence(act)}
@@ -148,7 +154,8 @@ export const CorrectiveActionsList: React.FC = () => {
                       )}
 
                       {(role === "veterinarian" || role === "officer") &&
-                        act.status === "Evidence Submitted" && (
+                        (act.status === "Evidence Submitted" ||
+                          act.status === "Awaiting Verification") && (
                           <div className="btn-group-verify">
                             <button
                               className="btn-verify-approve"

@@ -12,6 +12,9 @@ import type {
   RiskSummary,
   SpatialRiskResponse,
   ScheduledInspection,
+  RecommendedAction,
+  ActionPlanItem,
+  ScoreTimelineEvent,
 } from "../types";
 
 const PRODUCTION_API = "https://agrisentinel-api.onrender.com";
@@ -168,6 +171,20 @@ export const incidentService = {
       body: JSON.stringify({ action, notes }),
     });
   },
+
+  async getRecommendedActions(incidentId: string): Promise<RecommendedAction[]> {
+    return apiFetch<RecommendedAction[]>(`/incidents/${incidentId}/recommended-actions`);
+  },
+
+  async sendActionPlan(
+    incidentId: string,
+    actions: ActionPlanItem[]
+  ): Promise<{ incidentId: string; actionsCreated: number; actionIds: string[] }> {
+    return apiFetch(`/incidents/${incidentId}/action-plan`, {
+      method: "POST",
+      body: JSON.stringify({ actions }),
+    });
+  },
 };
 
 export const correctiveActionService = {
@@ -187,11 +204,15 @@ export const correctiveActionService = {
     return apiFetchForm<CorrectiveAction>(`/corrective-actions/${actionId}/evidence`, form);
   },
 
-  async verifyAction(actionId: string, approved: boolean): Promise<CorrectiveAction> {
+  async verifyAction(actionId: string, approved: boolean, notes?: string): Promise<CorrectiveAction> {
     return apiFetch<CorrectiveAction>(`/corrective-actions/${actionId}/verify`, {
       method: "POST",
-      body: JSON.stringify({ approved }),
+      body: JSON.stringify({ approved, notes }),
     });
+  },
+
+  async getAwaitingVerification(): Promise<CorrectiveAction[]> {
+    return apiFetch<CorrectiveAction[]>("/corrective-actions/awaiting-verification");
   },
 };
 
@@ -215,6 +236,10 @@ export const riskService = {
     return apiFetch<RiskSummary>(`/risk/farms/${farmId}/recalculate`, {
       method: "POST",
     });
+  },
+
+  async getScoreTimeline(farmId: string, days = 30): Promise<ScoreTimelineEvent[]> {
+    return apiFetch<ScoreTimelineEvent[]>(`/risk/farms/${farmId}/timeline?days=${days}`);
   },
 };
 

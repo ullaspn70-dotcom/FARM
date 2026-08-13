@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Stethoscope, CheckCircle, HelpCircle, XCircle, MapPin } from "lucide-react";
+import { Stethoscope, CheckCircle, HelpCircle, XCircle, MapPin, ShieldAlert } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import type { IncidentReport } from "../../types";
-import { incidentService, riskService } from "../../services/api";
+import type { Farm, IncidentReport, RiskFactor, RiskSummary } from "../../types";
+import { farmService, gisService, incidentService, riskService } from "../../services/api";
 import { StatusBadge } from "../common/StatusBadge";
 import { EvidencePreview } from "../common/EvidencePreview";
+import { VeterinaryActionPlanBuilder } from "./VeterinaryActionPlanBuilder";
+import { EvidenceInspectionPanel } from "./EvidenceInspectionPanel";
 
 export const VetDashboard: React.FC = () => {
   const { refreshFarms } = useAuth();
@@ -15,14 +17,18 @@ export const VetDashboard: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [farmContext, setFarmContext] = useState<Farm | null>(null);
+  const [riskSummary, setRiskSummary] = useState<RiskSummary | null>(null);
+  const [riskFactors, setRiskFactors] = useState<RiskFactor[]>([]);
+  const [spatialNote, setSpatialNote] = useState<string>("");
 
   const fetchIncidents = async () => {
     setLoading(true);
     try {
       const list = await incidentService.getIncidents();
       setIncidents(list);
-      if (list.length > 0 && !selectedIncident) {
-        setSelectedIncident(list[0]);
+      if (list.length > 0) {
+        setSelectedIncident((prev) => prev ?? list[0]);
       }
     } catch (err) {
       console.error(err);
@@ -36,45 +42,78 @@ export const VetDashboard: React.FC = () => {
     fetchIncidents();
   }, []);
 
+  useEffect(() => {
+    if (!selectedIncident) return;
+    let cancelled = false;
+    Promise.all([
+      farmService.getFarm(selectedIncident.farmId),
+      riskService.getRiskSummary(selectedIncident.farmId),
+      riskService.getRiskFactors(selectedIncident.farmId),
+      gisService.getSpatialRisk(selectedIncident.farmId).catch(() => null),
+    ]).then(([farm, summary, factors, spatial]) => {
+      if (cancelled) return;
+      setFarmContext(farm);
+      setRiskSummary(summary);
+      setRiskFactors(factors);
+      if (spatial?.nearbyHighRiskFarms?.length) {
+        setSpatialNote(
+          `${spatial.nearbyHighRiskFarms.length} high-risk farm(s) within ${spatial.radiusKm}km.`
+        );
+      } else {
+        setSpatialNote("No nearby high-risk farms detected in GIS radius.");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedIncident?.id, selectedIncident?.farmId]);
+
   const handleAction = async (action: "validate" | "request_info" | "reject") => {
     if (!selectedIncident) return;
+    if (selectedIncident.status === "Verified" || selectedIncident.status === "Rejected") {
+      setActionError("This incident is already closed.");
+      return;
+    }
     setProcessing(true);
     setActionError(null);
     setActionSuccess(null);
     try {
-      const updated = await incidentService.verifyIncident(
-        selectedIncident.id,
-        action,
-        actionNotes
-      );
+      const updated = await incidentService.verifyIncident(selectedIncident.id, action, actionNotes);
       setSelectedIncident(updated);
       setActionNotes("");
-      setActionSuccess(
-        action === "validate"
-          ? "Incident verified successfully. Corrective actions were generated."
-          : action === "request_info"
-          ? "More information requested from the farmer."
-          : "Incident rejected and marked as non-critical."
-      );
+      if (action === "validate") {
+        setActionSuccess(
+          "Incident verified. Risk/biosecurity status recalculated. Create and send the Veterinary Action Plan below."
+        );
+      } else if (action === "request_info") {
+        setActionSuccess("More information requested from the farmer.");
+      } else {
+        setActionSuccess("Incident rejected. Risk factor removed and score recalculated.");
+      }
       await fetchIncidents();
-      await riskService.recalculateFarm(selectedIncident.farmId).catch(() => undefined);
       await refreshFarms();
+      const summary = await riskService.getRiskSummary(updated.farmId);
+      setRiskSummary(summary);
+      setRiskFactors(await riskService.getRiskFactors(updated.farmId));
     } catch (err) {
       console.error(err);
       const message = err instanceof Error ? err.message : "";
       if (message.includes("already closed") || message.includes("409")) {
-        setActionError("This incident is already verified or rejected. Select a Reported incident.");
+        setActionError("This incident is already verified or rejected.");
       } else {
-        setActionError("Verification action failed. Please wait a moment and try again.");
+        setActionError(message || "Verification action failed.");
       }
     } finally {
       setProcessing(false);
     }
   };
 
+  const pendingCount = incidents.filter(
+    (i) => i.status === "Reported" || i.status === "Under Review" || i.status === "More Info Required"
+  ).length;
+
   return (
     <div className="vet-dashboard-view">
-      {/* Top Banner */}
       <div className="vet-header-card">
         <div className="header-left">
           <div className="vet-badge-icon">
@@ -84,15 +123,14 @@ export const VetDashboard: React.FC = () => {
             <span className="eyebrow-text">DISTRICT VETERINARY VERIFICATION PORTAL</span>
             <h2 className="view-title">Veterinary Verification Queue</h2>
             <p className="view-subtitle">
-              Inspect reported farm health incidents, verify diagnostic evidence, and issue official bio-hazard responses.
+              Review incidents → verify → send action plan → inspect corrective evidence.
             </p>
           </div>
         </div>
-
         <div className="vet-status-summary">
           <div className="summary-pill">
             <span>Pending Review:</span>
-            <strong>{incidents.filter((i) => i.status === "Reported" || i.status === "Under Review").length}</strong>
+            <strong>{pendingCount}</strong>
           </div>
           <div className="summary-pill">
             <span>Verified:</span>
@@ -101,12 +139,9 @@ export const VetDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Grid: Queue List + Detailed Verification Panel */}
       <div className="vet-queue-grid">
-        {/* Left Column: Incidents Queue List */}
         <div className="queue-list-panel">
           <h3 className="panel-title">Incoming Incident Reports</h3>
-
           {loading ? (
             <div className="loading-state">Loading incoming incidents...</div>
           ) : incidents.length === 0 ? (
@@ -116,9 +151,7 @@ export const VetDashboard: React.FC = () => {
               {incidents.map((inc) => (
                 <div
                   key={inc.id}
-                  className={`queue-item-card ${
-                    selectedIncident?.id === inc.id ? "selected" : ""
-                  }`}
+                  className={`queue-item-card ${selectedIncident?.id === inc.id ? "selected" : ""}`}
                   onClick={() => {
                     setSelectedIncident(inc);
                     setActionNotes("");
@@ -131,7 +164,7 @@ export const VetDashboard: React.FC = () => {
                     <StatusBadge type="incident" value={inc.status} size="sm" />
                   </div>
                   <strong className="inc-type">{inc.incidentType}</strong>
-                  <p className="inc-farm-name">📍 {inc.farmName}</p>
+                  <p className="inc-farm-name">{inc.farmName}</p>
                   <div className="item-meta">
                     <span>{inc.numberAffected} Affected</span>
                     <span>{inc.dateTime}</span>
@@ -142,10 +175,8 @@ export const VetDashboard: React.FC = () => {
           )}
         </div>
 
-        {/* Right Column: Detailed Incident Inspection & Action Workspace */}
         {selectedIncident ? (
           <div className="incident-inspection-workspace">
-            {/* Header */}
             <div className="workspace-header">
               <div>
                 <div className="id-status-row">
@@ -159,45 +190,55 @@ export const VetDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Farm & Health Details Card */}
+            {riskSummary && (
+              <div className="workspace-section risk-context-banner">
+                <ShieldAlert size={18} />
+                <div>
+                  <strong>
+                    Biosecurity Score: {riskSummary.biosecurityScore}/100 — Risk: {riskSummary.riskLevel.toUpperCase()}
+                  </strong>
+                  <p className="text-muted">
+                    Event 1 (verify incident) worsens risk. Event 2 (verify corrective evidence) allows recovery.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="workspace-details-grid">
               <div className="detail-box">
                 <span className="label">Reporting Farm</span>
                 <strong>{selectedIncident.farmName} ({selectedIncident.farmId})</strong>
               </div>
               <div className="detail-box">
-                <span className="label">Farm Type</span>
-                <strong>{selectedIncident.farmType.toUpperCase()}</strong>
-              </div>
-              <div className="detail-box">
-                <span className="label">Animal Species & Count</span>
+                <span className="label">Farm Type / Population</span>
                 <strong>
-                  {selectedIncident.animalType} ({selectedIncident.numberAffected} affected)
+                  {selectedIncident.farmType.toUpperCase()}
+                  {farmContext ? ` — ${farmContext.animalCount} animals` : ""}
                 </strong>
               </div>
               <div className="detail-box">
-                <span className="label">Farm Zone Location</span>
-                <strong>{selectedIncident.location}</strong>
+                <span className="label">Species & Affected</span>
+                <strong>
+                  {selectedIncident.animalType} ({selectedIncident.numberAffected})
+                </strong>
+              </div>
+              <div className="detail-box">
+                <span className="label">Date / Zone</span>
+                <strong>{selectedIncident.dateTime} — {selectedIncident.location}</strong>
               </div>
             </div>
 
-            {/* Health Observations */}
             <div className="workspace-section">
               <h4 className="section-title">Health Observations & Symptoms</h4>
               <p className="section-text">{selectedIncident.description}</p>
             </div>
 
-            {/* Evidence Preview Box */}
             <div className="workspace-section">
               <h4 className="section-title">Submitted Diagnostic Evidence</h4>
               {selectedIncident.evidenceFiles.length > 0 ? (
                 <div className="evidence-preview-list">
                   {selectedIncident.evidenceFiles.map((file, idx) => (
-                    <EvidencePreview
-                      key={idx}
-                      fileName={file.name}
-                      fileUrl={file.url}
-                    />
+                    <EvidencePreview key={idx} fileName={file.name} fileUrl={file.url} />
                   ))}
                 </div>
               ) : (
@@ -205,90 +246,105 @@ export const VetDashboard: React.FC = () => {
               )}
             </div>
 
-            {/* Nearby Risk Context */}
+            {riskFactors.length > 0 && (
+              <div className="workspace-section">
+                <h4 className="section-title">Active Risk Factors</h4>
+                <ul className="risk-factor-mini-list">
+                  {riskFactors.slice(0, 5).map((f) => (
+                    <li key={f.id}>
+                      {f.label} <span className="text-red">−{f.delta}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="workspace-section nearby-risk-box">
               <MapPin size={18} className="icon-amber" />
               <div>
-                <strong>Nearby Regional Context</strong>
-                <p>
-                  1 pig breeding farm (Ramgarh sector, 14km away) currently under high bio-security quarantine.
-                </p>
+                <strong>Spatial / Regional Context</strong>
+                <p>{spatialNote}</p>
               </div>
             </div>
 
-            {/* Status Workflow Progress Indicator */}
+            {selectedIncident.verifiedBy && (
+              <div className="workspace-section">
+                <h4 className="section-title">Verification Record</h4>
+                <p className="section-text">
+                  Verified by {selectedIncident.verifiedBy} at {selectedIncident.verifiedAt}
+                  {selectedIncident.veterinarianNotes ? ` — ${selectedIncident.veterinarianNotes}` : ""}
+                </p>
+              </div>
+            )}
+
             <div className="status-workflow-tracker">
               <span className="workflow-title">Workflow Progress:</span>
               <div className="workflow-steps">
                 <div className="step-pill done">Reported</div>
                 <div className={`step-pill ${selectedIncident.status !== "Reported" ? "done" : "active"}`}>
-                  Under Review
+                  Pending Review
                 </div>
-                <div className={`step-pill ${selectedIncident.status === "Verified" ? "verified" : selectedIncident.status === "More Info Required" ? "warning" : selectedIncident.status === "Rejected" ? "rejected" : ""}`}>
+                <div
+                  className={`step-pill ${
+                    selectedIncident.status === "Verified"
+                      ? "verified"
+                      : selectedIncident.status === "Rejected"
+                      ? "rejected"
+                      : selectedIncident.status === "More Info Required"
+                      ? "warning"
+                      : ""
+                  }`}
+                >
                   {selectedIncident.status === "Reported" || selectedIncident.status === "Under Review"
-                    ? "Pending Verification"
+                    ? "Awaiting Verification"
                     : selectedIncident.status}
                 </div>
               </div>
             </div>
 
-            {/* Verification Notes & Action Triggers */}
-            <div className="workspace-action-box">
-              <label className="form-label">Veterinary Inspector Notes / Verification Comments</label>
-              <textarea
-                rows={2}
-                value={actionNotes}
-                onChange={(e) => setActionNotes(e.target.value)}
-                placeholder="Enter diagnostic notes, laboratory sample directives, or reasons..."
-                className="form-textarea"
-              />
-
-              {actionSuccess && (
-                <div className="form-success-banner" role="status">
-                  {actionSuccess}
+            {(selectedIncident.status === "Reported" ||
+              selectedIncident.status === "Under Review" ||
+              selectedIncident.status === "More Info Required") && (
+              <div className="workspace-action-box">
+                <label className="form-label">Veterinary Inspector Notes</label>
+                <textarea
+                  rows={2}
+                  value={actionNotes}
+                  onChange={(e) => setActionNotes(e.target.value)}
+                  placeholder="Diagnostic notes, lab directives, or rejection reasons…"
+                  className="form-textarea"
+                />
+                {actionSuccess && <div className="form-success-banner">{actionSuccess}</div>}
+                {actionError && <div className="form-error-banner">{actionError}</div>}
+                <div className="action-button-group">
+                  <button disabled={processing} className="btn-action-validate" onClick={() => handleAction("validate")}>
+                    <CheckCircle size={16} />
+                    Verify Incident
+                  </button>
+                  <button disabled={processing} className="btn-action-request" onClick={() => handleAction("request_info")}>
+                    <HelpCircle size={16} />
+                    Request More Information
+                  </button>
+                  <button disabled={processing} className="btn-action-reject" onClick={() => handleAction("reject")}>
+                    <XCircle size={16} />
+                    Reject
+                  </button>
                 </div>
-              )}
-
-              {actionError && (
-                <div className="form-error-banner" role="alert">
-                  {actionError}
-                </div>
-              )}
-
-              <div className="action-button-group">
-                <button
-                  disabled={processing}
-                  className="btn-action-validate"
-                  onClick={() => handleAction("validate")}
-                >
-                  <CheckCircle size={16} />
-                  <span>Validate (Verify)</span>
-                </button>
-
-                <button
-                  disabled={processing}
-                  className="btn-action-request"
-                  onClick={() => handleAction("request_info")}
-                >
-                  <HelpCircle size={16} />
-                  <span>Request More Info</span>
-                </button>
-
-                <button
-                  disabled={processing}
-                  className="btn-action-reject"
-                  onClick={() => handleAction("reject")}
-                >
-                  <XCircle size={16} />
-                  <span>Reject</span>
-                </button>
               </div>
-            </div>
+            )}
+
+            <VeterinaryActionPlanBuilder
+              incident={selectedIncident}
+              ownerName={farmContext?.owner ?? "Farm Owner"}
+              onSent={() => setActionSuccess("Veterinary Action Plan sent to farmer.")}
+            />
           </div>
         ) : (
           <div className="workspace-empty">Select an incident from the queue to verify.</div>
         )}
       </div>
+
+      <EvidenceInspectionPanel />
     </div>
   );
 };

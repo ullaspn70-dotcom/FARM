@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown, Minus, HelpCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LocaleContext";
 import { passportService, riskService } from "../../services/api";
-import type { BiosecurityPassport, RiskFactor, RiskSummary } from "../../types";
+import type { BiosecurityPassport, RiskFactor, RiskSummary, ScoreTimelineEvent } from "../../types";
 import { translateContent } from "../../i18n/contentTranslate";
 import { ScoreTrendChart } from "./ScoreTrendChart";
 import { StatusBadge } from "../common/StatusBadge";
@@ -15,6 +15,7 @@ export const ScoreHistoryPanel: React.FC = () => {
   const [history, setHistory] = useState<{ time: string; score: number }[]>([]);
   const [factors, setFactors] = useState<RiskFactor[]>([]);
   const [passport, setPassport] = useState<BiosecurityPassport | null>(null);
+  const [timeline, setTimeline] = useState<ScoreTimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,13 +27,15 @@ export const ScoreHistoryPanel: React.FC = () => {
       riskService.getRiskHistory(activeFarm.id, 30),
       riskService.getRiskFactors(activeFarm.id),
       passportService.getBiosecurityPassport(activeFarm.id),
+      riskService.getScoreTimeline(activeFarm.id, 30),
     ])
-      .then(([summaryData, historyData, factorsData, passportData]) => {
+      .then(([summaryData, historyData, factorsData, passportData, timelineData]) => {
         if (!cancelled) {
           setSummary(summaryData);
           setHistory(historyData);
           setFactors(factorsData);
           setPassport(passportData);
+          setTimeline(timelineData);
         }
       })
       .catch(() => {
@@ -41,6 +44,7 @@ export const ScoreHistoryPanel: React.FC = () => {
           setHistory([]);
           setFactors([]);
           setPassport(null);
+          setTimeline([]);
         }
       })
       .finally(() => {
@@ -125,6 +129,23 @@ export const ScoreHistoryPanel: React.FC = () => {
                   <span className="component-val">{comp.value}</span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {timeline.length > 0 && (
+            <div className="score-timeline-section">
+              <h4>Score change timeline</h4>
+              <ol className="score-timeline-list">
+                {timeline.map((evt, idx) => (
+                  <li key={`${evt.referenceId}-${idx}`} className={`timeline-event timeline-${evt.eventType}`}>
+                    <span className="timeline-score">{evt.score}</span>
+                    <div>
+                      <strong>{evt.label}</strong>
+                      <span className="timeline-time">{new Date(evt.time).toLocaleString()}</span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
             </div>
           )}
 

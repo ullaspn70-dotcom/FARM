@@ -19,6 +19,15 @@ from app.utils.serializers import action_to_response
 router = APIRouter(prefix="/corrective-actions", tags=["Corrective Actions"])
 
 
+@router.get("/awaiting-verification", response_model=list[CorrectiveActionResponse])
+def list_awaiting_verification(
+    db: Session = Depends(get_db),
+    current_user: Annotated[User | None, Depends(require_roles(UserRole.VETERINARIAN, UserRole.OFFICER))] = None,
+):
+    actions = CorrectiveActionService.list_awaiting_evidence(db, current_user)
+    return [action_to_response(a, db) for a in actions]
+
+
 @router.get("", response_model=list[CorrectiveActionResponse])
 def list_actions(
     farm_id: str | None = Query(default=None, alias="farmId"),
