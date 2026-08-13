@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Upload, Calendar, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Upload, Calendar, CheckCircle2, ChevronDown, ChevronUp, ClipboardList } from "lucide-react";
 import type { CorrectiveAction } from "../../types";
 import { correctiveActionService, riskService } from "../../services/api";
 import { StatusBadge } from "../common/StatusBadge";
@@ -10,6 +10,30 @@ import { useTranslation } from "../../context/LocaleContext";
 import { useNotifications } from "../../context/NotificationContext";
 import { translateContent } from "../../i18n/contentTranslate";
 import { translateData } from "../../i18n/dataTranslations";
+
+const STATUS_ORDER: Record<string, number> = {
+  Pending: 0,
+  "In Progress": 1,
+  "Evidence Submitted": 2,
+  "Awaiting Verification": 3,
+  Verified: 4,
+  Closed: 5,
+};
+
+function sortActions(list: CorrectiveAction[]): CorrectiveAction[] {
+  return [...list].sort((a, b) => {
+    const sa = STATUS_ORDER[a.status] ?? 99;
+    const sb = STATUS_ORDER[b.status] ?? 99;
+    if (sa !== sb) return sa - sb;
+    return a.deadline.localeCompare(b.deadline);
+  });
+}
+
+function farmerCanUpload(act: CorrectiveAction): boolean {
+  if (act.status === "Verified" || act.status === "Closed") return false;
+  if (act.status === "Evidence Submitted" || act.status === "Awaiting Verification") return false;
+  return act.evidenceRequired !== false;
+}
 
 export const CorrectiveActionsList: React.FC = () => {
   const { role, activeFarm, refreshFarms } = useAuth();
@@ -28,12 +52,10 @@ export const CorrectiveActionsList: React.FC = () => {
       const data = await correctiveActionService.getActions(
         role === "farmer" ? activeFarm.id : undefined
       );
-      setActions(data);
+      setActions(sortActions(data));
     } catch (err) {
       setActions([]);
-      setError(
-        err instanceof Error ? err.message : t("actions.error")
-      );
+      setError(err instanceof Error ? err.message : t("actions.error"));
     } finally {
       setLoading(false);
     }
@@ -41,7 +63,19 @@ export const CorrectiveActionsList: React.FC = () => {
 
   useEffect(() => {
     fetchActions();
+    const onFocus = () => fetchActions();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [role, activeFarm.id]);
+
+  const vetPlanActions = useMemo(() => {
+    if (role !== "farmer") return [];
+    return actions.filter(
+      (a) =>
+        (a.status === "Pending" || a.status === "In Progress") &&
+        a.evidenceRequired !== false
+    );
+  }, [actions, role]);
 
   const handleVerify = async (actionId: string, approve: boolean, notes?: string) => {
     try {
@@ -59,9 +93,91 @@ export const CorrectiveActionsList: React.FC = () => {
     }
   };
 
+  const renderRow = (act: CorrectiveAction) => (
+    <React.Fragment key={act.id}>
+      <tr className={vetPlanActions.some((v) => v.id === act.id) ? "vet-plan-row" : ""}>
+        <td className="cell-main-info">
+          <strong className="action-item-title">{translateContent(act.title, t)}</strong>
+          <p className="action-item-desc">{translateContent(act.description, t)}</p>
+          {act.incidentId && (
+            <span className="farm-tag-sub">Source incident: {act.incidentId}</span>
+          )}
+          <span className="farm-tag-sub">
+            {t("actions.farmTag")}: {translateData(act.farmName, locale)}
+          </span>
+          <button
+            type="button"
+            className="btn-trace-toggle"
+            onClick={() => setExpandedId(expandedId === act.id ? null : act.id)}
+          >
+            {expandedId === act.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {t("actions.traceability")}
+          </button>
+        </td>
+        <td>
+          <span className={`priority-badge priority-${act.priority}`}>
+            {t(
+              `actionCenter.priority.${act.priority.toLowerCase() as "urgent" | "high" | "medium" | "low"}`
+            )}
+          </span>
+        </td>
+        <td className="cell-person">{translateData(act.assignedPerson, locale)}</td>
+        <td className="cell-date">
+          <Calendar size={14} className="inline-icon" /> {act.deadline}
+        </td>
+        <td>
+          <StatusBadge type="action" value={act.status} size="sm" />
+        </td>
+        <td>
+          {act.submittedEvidence ? (
+            <div className="evidence-badge-verified">
+              <CheckCircle2 size={14} color="#154D38" />
+              <span>
+                {t("actions.evidenceSubmittedWithStatus", {
+                  status: translateContent(act.verificationStatus, t),
+                })}
+              </span>
+            </div>
+          ) : (
+            <span className="text-muted">{t("actions.evidenceRequired")}</span>
+          )}
+        </td>
+        <td className="cell-buttons">
+          {role === "farmer" && farmerCanUpload(act) && (
+            <button
+              className="btn-upload-evidence"
+              onClick={() => setSelectedActionForEvidence(act)}
+            >
+              <Upload size={14} />
+              <span>{t("actions.uploadEvidence")}</span>
+            </button>
+          )}
+
+          {(role === "veterinarian" || role === "officer") &&
+            (act.status === "Evidence Submitted" || act.status === "Awaiting Verification") && (
+              <div className="btn-group-verify">
+                <button className="btn-verify-approve" onClick={() => handleVerify(act.id, true)}>
+                  {t("actions.verify")}
+                </button>
+                <button className="btn-verify-reject" onClick={() => handleVerify(act.id, false)}>
+                  {t("actions.reject")}
+                </button>
+              </div>
+            )}
+        </td>
+      </tr>
+      {expandedId === act.id && (
+        <tr className="traceability-row">
+          <td colSpan={7}>
+            <CorrectiveActionTraceability action={act} />
+          </td>
+        </tr>
+      )}
+    </React.Fragment>
+  );
+
   return (
     <div className="corrective-actions-view">
-      {/* Header */}
       <div className="actions-header-card">
         <div>
           <span className="eyebrow-text">{t("actions.eyebrow")}</span>
@@ -76,7 +192,47 @@ export const CorrectiveActionsList: React.FC = () => {
         </div>
       )}
 
-      {/* Actions Table / Card List */}
+      {role === "farmer" && !loading && vetPlanActions.length > 0 && (
+        <section className="vet-action-plan-farmer-section">
+          <div className="section-header-row">
+            <ClipboardList size={20} />
+            <h3 className="panel-title">Veterinary Action Plan — Your Tasks</h3>
+          </div>
+          <p className="section-text text-muted">
+            Complete each action below and upload photo evidence. The veterinarian will inspect your
+            uploads in Evidence Inspection.
+          </p>
+          <div className="vet-plan-cards">
+            {vetPlanActions.map((act) => (
+              <div key={act.id} className="vet-plan-card">
+                <div className="vet-plan-card-head">
+                  <strong>{act.title}</strong>
+                  <StatusBadge type="action" value={act.status} size="sm" />
+                </div>
+                <p>{act.description}</p>
+                <div className="vet-plan-card-meta">
+                  <span>Due: {act.deadline}</span>
+                  <span className={`priority-badge priority-${act.priority}`}>{act.priority}</span>
+                </div>
+                {farmerCanUpload(act) && (
+                  <button
+                    type="button"
+                    className="btn-upload-evidence"
+                    onClick={() => setSelectedActionForEvidence(act)}
+                  >
+                    <Upload size={14} />
+                    Upload Evidence Photo
+                  </button>
+                )}
+                {act.submittedEvidence && (
+                  <p className="text-muted">Evidence submitted — awaiting veterinary inspection.</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="actions-table-card">
         {loading ? (
           <div className="loading-state">{t("actions.loading")}</div>
@@ -96,102 +252,12 @@ export const CorrectiveActionsList: React.FC = () => {
                   <th>{t("actions.colActions")}</th>
                 </tr>
               </thead>
-              <tbody>
-                {actions.map((act) => (
-                  <React.Fragment key={act.id}>
-                  <tr>
-                    <td className="cell-main-info">
-                      <strong className="action-item-title">{translateContent(act.title, t)}</strong>
-                      <p className="action-item-desc">{translateContent(act.description, t)}</p>
-                      <span className="farm-tag-sub">
-                        {t("actions.farmTag")}: {translateData(act.farmName, locale)}
-                      </span>
-                      <button
-                        type="button"
-                        className="btn-trace-toggle"
-                        onClick={() => setExpandedId(expandedId === act.id ? null : act.id)}
-                      >
-                        {expandedId === act.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        {t("actions.traceability")}
-                      </button>
-                    </td>
-                    <td>
-                      <span className={`priority-badge priority-${act.priority}`}>
-                        {t(
-                          `actionCenter.priority.${act.priority.toLowerCase() as "urgent" | "high" | "medium" | "low"}`
-                        )}
-                      </span>
-                    </td>
-                    <td className="cell-person">{translateData(act.assignedPerson, locale)}</td>
-                    <td className="cell-date">
-                      <Calendar size={14} className="inline-icon" /> {act.deadline}
-                    </td>
-                    <td>
-                      <StatusBadge type="action" value={act.status} size="sm" />
-                    </td>
-                    <td>
-                      {act.submittedEvidence ? (
-                        <div className="evidence-badge-verified">
-                          <CheckCircle2 size={14} color="#154D38" />
-                          <span>
-                            {t("actions.evidenceSubmittedWithStatus", {
-                              status: translateContent(act.verificationStatus, t),
-                            })}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-muted">{t("actions.evidenceRequired")}</span>
-                      )}
-                    </td>
-                    <td className="cell-buttons">
-                      {role === "farmer" &&
-                        act.status !== "Verified" &&
-                        act.status !== "Closed" && (
-                        <button
-                          className="btn-upload-evidence"
-                          onClick={() => setSelectedActionForEvidence(act)}
-                        >
-                          <Upload size={14} />
-                          <span>{t("actions.uploadEvidence")}</span>
-                        </button>
-                      )}
-
-                      {(role === "veterinarian" || role === "officer") &&
-                        (act.status === "Evidence Submitted" ||
-                          act.status === "Awaiting Verification") && (
-                          <div className="btn-group-verify">
-                            <button
-                              className="btn-verify-approve"
-                              onClick={() => handleVerify(act.id, true)}
-                            >
-                              {t("actions.verify")}
-                            </button>
-                            <button
-                              className="btn-verify-reject"
-                              onClick={() => handleVerify(act.id, false)}
-                            >
-                              {t("actions.reject")}
-                            </button>
-                          </div>
-                        )}
-                    </td>
-                  </tr>
-                  {expandedId === act.id && (
-                    <tr className="traceability-row">
-                      <td colSpan={7}>
-                        <CorrectiveActionTraceability action={act} />
-                      </td>
-                    </tr>
-                  )}
-                  </React.Fragment>
-                ))}
-              </tbody>
+              <tbody>{actions.map(renderRow)}</tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* Evidence Upload Modal Trigger */}
       <EvidenceUploadModal
         action={selectedActionForEvidence}
         isOpen={!!selectedActionForEvidence}

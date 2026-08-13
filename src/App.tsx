@@ -11,6 +11,7 @@ import { BiosecurityActionCenter } from "./components/farmer/BiosecurityActionCe
 import { RiskDashboard } from "./components/risk/RiskDashboard";
 import { IncidentReportForm } from "./components/incident/IncidentReportForm";
 import { VetDashboard } from "./components/vet/VetDashboard";
+import { VetEvidenceInspectionView } from "./components/vet/VetEvidenceInspectionView";
 import { CorrectiveActionsList } from "./components/corrective/CorrectiveActionsList";
 import { OfficerDashboard } from "./components/officer/OfficerDashboard";
 import { GisFarmMap } from "./components/gis/GisFarmMap";
@@ -88,6 +89,10 @@ function AppContent() {
             (role === "veterinarian" ? <VetDashboard /> : farmerDashboard)}
 
           {activeTab === "actions" && <CorrectiveActionsList />}
+
+          {activeTab === "evidence-inspection" && role === "veterinarian" && (
+            <VetEvidenceInspectionView />
+          )}
 
           {activeTab === "gis" && (
             <GisFarmMap

@@ -24,7 +24,7 @@ from app.utils.helpers import generate_id
 class CorrectiveActionService:
     @staticmethod
     def list_actions(db: Session, farm_id: str | None = None, user: User | None = None) -> list[CorrectiveAction]:
-        query = db.query(CorrectiveAction).order_by(CorrectiveAction.deadline.asc())
+        query = db.query(CorrectiveAction).order_by(CorrectiveAction.created_at.desc())
         if farm_id:
             FarmService.get_farm(db, farm_id, user)
             query = query.filter(CorrectiveAction.farm_id == farm_id)

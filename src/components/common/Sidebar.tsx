@@ -7,6 +7,7 @@ import {
   CheckSquare,
   MapPin,
   ShieldAlert,
+  FileSearch,
   HelpCircle,
   Target,
 } from "lucide-react";
@@ -21,7 +22,8 @@ export type NavTab =
   | "actions"
   | "gis"
   | "officer"
-  | "action-center";
+  | "action-center"
+  | "evidence-inspection";
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -101,6 +103,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {role === "veterinarian" ? t("nav.incident.vet") : t("nav.incident")}
           </span>
         </button>
+
+        {role === "veterinarian" && (
+          <button
+            className={`sidebar-link ${activeTab === "evidence-inspection" ? "active" : ""}`}
+            onClick={() => setActiveTab("evidence-inspection")}
+          >
+            <FileSearch size={18} />
+            <span>Evidence Inspection</span>
+          </button>
+        )}
 
         <button
           className={`sidebar-link ${activeTab === "actions" ? "active" : ""}`}

@@ -6,7 +6,6 @@ import { farmService, gisService, incidentService, riskService } from "../../ser
 import { StatusBadge } from "../common/StatusBadge";
 import { EvidencePreview } from "../common/EvidencePreview";
 import { VeterinaryActionPlanBuilder } from "./VeterinaryActionPlanBuilder";
-import { EvidenceInspectionPanel } from "./EvidenceInspectionPanel";
 
 export const VetDashboard: React.FC = () => {
   const { refreshFarms } = useAuth();
@@ -337,15 +336,25 @@ export const VetDashboard: React.FC = () => {
               incident={selectedIncident}
               farmId={selectedIncident.farmId}
               ownerName={farmContext?.owner ?? "Farm Owner"}
-              onSent={() => setActionSuccess("Veterinary Action Plan sent to farmer.")}
+              onSent={() =>
+                setActionSuccess(
+                  "Veterinary Action Plan sent. Farmer will see items under Corrective Actions. Check Evidence Inspection when they upload photos."
+                )
+              }
             />
+
+            <div className="workspace-section evidence-link-banner">
+              <p>
+                After the farmer uploads evidence, open the{" "}
+                <strong>Evidence Inspection</strong> tab in the sidebar to review their photos and
+                confirm.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="workspace-empty">Select an incident from the queue to verify.</div>
         )}
       </div>
-
-      <EvidenceInspectionPanel />
     </div>
   );
 };
