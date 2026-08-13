@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { LocaleProvider } from "./context/LocaleContext";
@@ -6,18 +6,47 @@ import { Navbar } from "./components/common/Navbar";
 import { Sidebar, type NavTab } from "./components/common/Sidebar";
 import { MobileNav } from "./components/common/MobileNav";
 import { FarmerDashboard } from "./components/farmer/FarmerDashboard";
-import { BiosecurityPassportModal } from "./components/farmer/BiosecurityPassportModal";
 import { BiosecurityActionCenter } from "./components/farmer/BiosecurityActionCenter";
-import { RiskDashboard } from "./components/risk/RiskDashboard";
 import { IncidentReportForm } from "./components/incident/IncidentReportForm";
-import { VetDashboard } from "./components/vet/VetDashboard";
-import { VetEvidenceInspectionView } from "./components/vet/VetEvidenceInspectionView";
-import { CorrectiveActionsList } from "./components/corrective/CorrectiveActionsList";
-import { OfficerDashboard } from "./components/officer/OfficerDashboard";
-import { GisFarmMap } from "./components/gis/GisFarmMap";
 import { NotificationCenter } from "./components/notifications/NotificationCenter";
-import { AarohiAdvisorModal } from "./components/common/AarohiAdvisorModal";
+import { SyncProvider } from "./context/SyncContext";
+import { OfflineBanner } from "./components/common/OfflineBanner";
 import "./App.css";
+
+const RiskDashboard = lazy(() =>
+  import("./components/risk/RiskDashboard").then((m) => ({ default: m.RiskDashboard }))
+);
+const VetDashboard = lazy(() =>
+  import("./components/vet/VetDashboard").then((m) => ({ default: m.VetDashboard }))
+);
+const VetEvidenceInspectionView = lazy(() =>
+  import("./components/vet/VetEvidenceInspectionView").then((m) => ({
+    default: m.VetEvidenceInspectionView,
+  }))
+);
+const CorrectiveActionsList = lazy(() =>
+  import("./components/corrective/CorrectiveActionsList").then((m) => ({
+    default: m.CorrectiveActionsList,
+  }))
+);
+const OfficerDashboard = lazy(() =>
+  import("./components/officer/OfficerDashboard").then((m) => ({ default: m.OfficerDashboard }))
+);
+const GisFarmMap = lazy(() =>
+  import("./components/gis/GisFarmMap").then((m) => ({ default: m.GisFarmMap }))
+);
+const BiosecurityPassportModal = lazy(() =>
+  import("./components/farmer/BiosecurityPassportModal").then((m) => ({
+    default: m.BiosecurityPassportModal,
+  }))
+);
+const AarohiAdvisorModal = lazy(() =>
+  import("./components/common/AarohiAdvisorModal").then((m) => ({ default: m.AarohiAdvisorModal }))
+);
+
+function TabLoadingFallback() {
+  return <div className="loading-state">Loading…</div>;
+}
 
 function AppContent() {
   const { role, refreshFarms } = useAuth();
@@ -29,19 +58,10 @@ function AppContent() {
   const [isReportIncidentOpen, setIsReportIncidentOpen] = useState(false);
   const [isAarohiOpen, setIsAarohiOpen] = useState(false);
 
-  const farmerDashboard = (
-    <FarmerDashboard
-      onOpenPassport={() => setIsPassportOpen(true)}
-      onOpenReportIncident={() => setIsReportIncidentOpen(true)}
-      onNavigateToActions={() => setActiveTab("actions")}
-      onNavigateToRisk={() => setActiveTab("risk")}
-      onNavigateToActionCenter={() => setActiveTab("action-center")}
-    />
-  );
-
   return (
     <div className="bioshield-app">
       <Navbar onToggleMobileNav={() => setIsMobileNavOpen(true)} />
+      <OfflineBanner />
 
       <div className="app-workspace-layout">
         <Sidebar
@@ -62,68 +82,126 @@ function AppContent() {
         />
 
         <main className="bioshield-main-content">
-          {activeTab === "overview" &&
-            (role === "farmer"
-              ? farmerDashboard
-              : role === "veterinarian"
-              ? <VetDashboard />
-              : <OfficerDashboard onNavigateToGis={() => setActiveTab("gis")} />)}
+          {activeTab === "overview" && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              {role === "farmer" ? (
+                <FarmerDashboard
+                  onOpenPassport={() => setIsPassportOpen(true)}
+                  onOpenReportIncident={() => setIsReportIncidentOpen(true)}
+                  onNavigateToActions={() => setActiveTab("actions")}
+                  onNavigateToRisk={() => setActiveTab("risk")}
+                  onNavigateToActionCenter={() => setActiveTab("action-center")}
+                />
+              ) : role === "veterinarian" ? (
+                <VetDashboard />
+              ) : (
+                <OfficerDashboard onNavigateToGis={() => setActiveTab("gis")} />
+              )}
+            </Suspense>
+          )}
 
-          {activeTab === "passport" && farmerDashboard}
+          {activeTab === "passport" && (
+            <FarmerDashboard
+              onOpenPassport={() => setIsPassportOpen(true)}
+              onOpenReportIncident={() => setIsReportIncidentOpen(true)}
+              onNavigateToActions={() => setActiveTab("actions")}
+              onNavigateToRisk={() => setActiveTab("risk")}
+              onNavigateToActionCenter={() => setActiveTab("action-center")}
+            />
+          )}
 
           {activeTab === "action-center" && (
             role === "farmer" ? (
               <BiosecurityActionCenter
                 onNavigateToActions={() => setActiveTab("actions")}
               />
-            ) : role === "officer" ? (
-              <OfficerDashboard onNavigateToGis={() => setActiveTab("gis")} />
             ) : (
-              <VetDashboard />
+              <Suspense fallback={<TabLoadingFallback />}>
+                {role === "officer" ? (
+                  <OfficerDashboard onNavigateToGis={() => setActiveTab("gis")} />
+                ) : (
+                  <VetDashboard />
+                )}
+              </Suspense>
             )
           )}
 
-          {activeTab === "risk" && <RiskDashboard />}
+          {activeTab === "risk" && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              <RiskDashboard />
+            </Suspense>
+          )}
 
-          {activeTab === "incident" &&
-            (role === "veterinarian" ? <VetDashboard /> : farmerDashboard)}
+          {activeTab === "incident" && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              {role === "veterinarian" ? (
+                <VetDashboard />
+              ) : (
+                <FarmerDashboard
+                  onOpenPassport={() => setIsPassportOpen(true)}
+                  onOpenReportIncident={() => setIsReportIncidentOpen(true)}
+                  onNavigateToActions={() => setActiveTab("actions")}
+                  onNavigateToRisk={() => setActiveTab("risk")}
+                  onNavigateToActionCenter={() => setActiveTab("action-center")}
+                />
+              )}
+            </Suspense>
+          )}
 
-          {activeTab === "actions" && <CorrectiveActionsList />}
+          {activeTab === "actions" && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              <CorrectiveActionsList />
+            </Suspense>
+          )}
 
           {activeTab === "evidence-inspection" && role === "veterinarian" && (
-            <VetEvidenceInspectionView />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <VetEvidenceInspectionView />
+            </Suspense>
           )}
 
           {activeTab === "gis" && (
-            <GisFarmMap
-              onOpenPassport={() => setIsPassportOpen(true)}
-              onNavigateToRisk={() => setActiveTab("risk")}
-            />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <GisFarmMap
+                onOpenPassport={() => setIsPassportOpen(true)}
+                onNavigateToRisk={() => setActiveTab("risk")}
+              />
+            </Suspense>
           )}
 
           {activeTab === "officer" && (
-            <OfficerDashboard onNavigateToGis={() => setActiveTab("gis")} />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <OfficerDashboard onNavigateToGis={() => setActiveTab("gis")} />
+            </Suspense>
           )}
         </main>
       </div>
 
-      <BiosecurityPassportModal
-        isOpen={isPassportOpen}
-        onClose={() => setIsPassportOpen(false)}
-      />
+      {isPassportOpen && (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <BiosecurityPassportModal
+            isOpen={isPassportOpen}
+            onClose={() => setIsPassportOpen(false)}
+          />
+        </Suspense>
+      )}
 
       <IncidentReportForm
         isOpen={isReportIncidentOpen}
         onClose={() => setIsReportIncidentOpen(false)}
         onSubmitted={() => {
-          void refreshFarms();
+          void refreshFarms(true);
         }}
       />
 
-      <AarohiAdvisorModal
-        isOpen={isAarohiOpen}
-        onClose={() => setIsAarohiOpen(false)}
-      />
+      {isAarohiOpen && (
+        <Suspense fallback={null}>
+          <AarohiAdvisorModal
+            isOpen={isAarohiOpen}
+            onClose={() => setIsAarohiOpen(false)}
+          />
+        </Suspense>
+      )}
 
       <NotificationCenter />
     </div>
@@ -134,9 +212,11 @@ export default function App() {
   return (
     <LocaleProvider>
       <AuthProvider>
-        <NotificationProvider>
-          <AppContent />
-        </NotificationProvider>
+        <SyncProvider>
+          <NotificationProvider>
+            <AppContent />
+          </NotificationProvider>
+        </SyncProvider>
       </AuthProvider>
     </LocaleProvider>
   );

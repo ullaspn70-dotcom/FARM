@@ -11,6 +11,7 @@ import { useNotifications } from "../../context/NotificationContext";
 import { translateContent } from "../../i18n/contentTranslate";
 import { translateData } from "../../i18n/dataTranslations";
 import { isVeterinaryActionPlan, stripVetPlanMarker } from "../../utils/evidenceAnalysis";
+import { getCachedCorrectiveActions } from "../../offline/offlineBridge";
 
 const STATUS_ORDER: Record<string, number> = {
   Pending: 0,
@@ -49,15 +50,26 @@ export const CorrectiveActionsList: React.FC = () => {
   const [selectedActionForEvidence, setSelectedActionForEvidence] = useState<CorrectiveAction | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const fetchActions = async () => {
-    setLoading(true);
-    setError("");
+  const fetchActions = async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setLoading(true);
+      setError("");
+    }
     try {
       const data = await correctiveActionService.getActions(
         role === "farmer" ? activeFarm.id : undefined
       );
       setActions(sortActions(data));
     } catch (err) {
+      if (role === "farmer") {
+        const cached = await getCachedCorrectiveActions(activeFarm.id);
+        if (cached) {
+          setActions(sortActions(cached));
+          setError("Showing cached corrective actions — may be outdated.");
+          setLoading(false);
+          return;
+        }
+      }
       setActions([]);
       setError(err instanceof Error ? err.message : t("actions.error"));
     } finally {
@@ -67,7 +79,7 @@ export const CorrectiveActionsList: React.FC = () => {
 
   useEffect(() => {
     fetchActions();
-    const onFocus = () => fetchActions();
+    const onFocus = () => fetchActions({ silent: true });
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [role, activeFarm.id]);

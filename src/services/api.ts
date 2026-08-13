@@ -20,6 +20,10 @@ import type {
 import { getDefaultRecommendedActions } from "../data/recommendedActions";
 import { analyzeEvidenceLocally, isVeterinaryActionPlan, VET_PLAN_MARKER } from "../utils/evidenceAnalysis";
 import type { EvidenceAnalysis } from "../types";
+import { cacheFarmBundle } from "../offline/storage/cacheStore";
+import { cachedGet, cacheKey, invalidateApiCache, DEFAULT_CACHE_TTL_MS } from "./apiCache";
+
+export { invalidateApiCache, DEFAULT_CACHE_TTL_MS as API_CACHE_TTL_MS };
 
 const PRODUCTION_API = "https://agrisentinel-api.onrender.com";
 
@@ -40,6 +44,21 @@ function resolveApiBase(): string {
 
 const API_BASE = resolveApiBase();
 const API_V1 = `${API_BASE}/api/v1`;
+
+function scheduleIdle(task: () => void): void {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    window.requestIdleCallback(() => task(), { timeout: 3000 });
+  } else {
+    setTimeout(task, 0);
+  }
+}
+
+async function cachedApiGet<T>(
+  path: string,
+  options?: { ttlMs?: number; force?: boolean }
+): Promise<T> {
+  return cachedGet(cacheKey("GET", path), () => apiFetch<T>(path), options);
+}
 
 function parseApiError(text: string, status: number): string {
   try {
@@ -64,10 +83,18 @@ function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function apiFetchForm<T>(path: string, formData: FormData, method = "POST"): Promise<T> {
+async function apiFetchForm<T>(
+  path: string,
+  formData: FormData,
+  method = "POST",
+  idempotencyKey?: string
+): Promise<T> {
+  const headers: Record<string, string> = { ...getAuthHeaders() };
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+
   const response = await fetch(`${API_V1}${path}`, {
     method,
-    headers: getAuthHeaders(),
+    headers,
     body: formData,
   });
 
@@ -79,12 +106,13 @@ async function apiFetchForm<T>(path: string, formData: FormData, method = "POST"
   return response.json() as Promise<T>;
 }
 
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function apiFetch<T>(path: string, options: RequestInit = {}, idempotencyKey?: string): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...getAuthHeaders(),
     ...(options.headers as Record<string, string> | undefined),
   };
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
 
   const response = await fetch(`${API_V1}${path}`, {
     ...options,
@@ -104,16 +132,34 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 }
 
 export const farmService = {
-  async getFarm(farmId: string): Promise<Farm> {
-    return apiFetch<Farm>(`/farms/${farmId}`);
+  async getFarm(farmId: string, options?: { force?: boolean }): Promise<Farm> {
+    return cachedApiGet<Farm>(`/farms/${farmId}`, options);
   },
 
-  async getAllFarms(): Promise<Farm[]> {
-    return apiFetch<Farm[]>("/farms");
+  async getAllFarms(options?: { force?: boolean }): Promise<Farm[]> {
+    const farms = await cachedApiGet<Farm[]>("/farms", options);
+    scheduleIdle(() => {
+      Promise.all(
+        farms.map((farm) => cacheFarmBundle(farm.id, { farm }).catch(() => undefined))
+      ).catch(() => undefined);
+    });
+    return farms;
   },
 
-  async getChecklist(farmId: string): Promise<ChecklistItem[]> {
-    return apiFetch<ChecklistItem[]>(`/farms/${farmId}/checklist`);
+  async getChecklist(farmId: string, options?: { force?: boolean }): Promise<ChecklistItem[]> {
+    const path = `/farms/${farmId}/checklist`;
+    const checklist = await cachedApiGet<ChecklistItem[]>(path, options);
+    scheduleIdle(() => {
+      import("../offline/storage/cacheStore")
+        .then((m) => m.getCachedFarmBundle(farmId))
+        .then((cached) => {
+          if (cached) {
+            return cacheFarmBundle(farmId, { farm: cached.farm, checklist });
+          }
+        })
+        .catch(() => undefined);
+    });
+    return checklist;
   },
 
   async updateChecklistItem(
@@ -121,29 +167,48 @@ export const farmService = {
     itemId: string,
     completed: boolean
   ): Promise<ChecklistItem> {
-    return apiFetch<ChecklistItem>(`/farms/${farmId}/checklist/${itemId}`, {
+    const result = await apiFetch<ChecklistItem>(`/farms/${farmId}/checklist/${itemId}`, {
       method: "PATCH",
       body: JSON.stringify({ completed }),
     });
+    invalidateApiCache(`/farms/${farmId}/checklist`);
+    invalidateApiCache("/farms");
+    return result;
   },
 };
 
 export const passportService = {
-  async getBiosecurityPassport(farmId: string): Promise<BiosecurityPassport> {
-    return apiFetch<BiosecurityPassport>(`/farms/${farmId}/passport`);
+  async getBiosecurityPassport(farmId: string, options?: { force?: boolean }): Promise<BiosecurityPassport> {
+    return cachedApiGet<BiosecurityPassport>(`/farms/${farmId}/passport`, options);
   },
 };
 
 export const incidentService = {
-  async getIncidents(farmId?: string): Promise<IncidentReport[]> {
+  async getIncidents(farmId?: string, options?: { force?: boolean }): Promise<IncidentReport[]> {
     const query = farmId ? `?farmId=${encodeURIComponent(farmId)}` : "";
-    return apiFetch<IncidentReport[]>(`/incidents${query}`);
+    const path = `/incidents${query}`;
+    const incidents = await cachedApiGet<IncidentReport[]>(path, options);
+    if (farmId) {
+      scheduleIdle(() => {
+        import("../offline/storage/cacheStore")
+          .then((m) => m.getCachedFarmBundle(farmId))
+          .then((cached) => {
+            if (cached) {
+              return cacheFarmBundle(farmId, { farm: cached.farm, incidents });
+            }
+          })
+          .catch(() => undefined);
+      });
+    }
+    return incidents;
   },
 
   async submitIncident(
     newIncident: Omit<IncidentReport, "id" | "status" | "severity">,
-    evidenceFile?: File | null
+    evidenceFile?: File | null,
+    idempotencyKey?: string
   ): Promise<IncidentReport> {
+    let result: IncidentReport;
     if (evidenceFile) {
       const form = new FormData();
       form.append("farm_id", newIncident.farmId);
@@ -154,21 +219,28 @@ export const incidentService = {
       form.append("description", newIncident.description);
       form.append("location", newIncident.location);
       form.append("evidence", evidenceFile);
-      return apiFetchForm<IncidentReport>("/incidents", form);
+      result = await apiFetchForm<IncidentReport>("/incidents", form, "POST", idempotencyKey);
+    } else {
+      result = await apiFetch<IncidentReport>(
+        "/incidents/json",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            farmId: newIncident.farmId,
+            incidentType: newIncident.incidentType,
+            animalType: newIncident.animalType,
+            numberAffected: newIncident.numberAffected,
+            dateTime: newIncident.dateTime,
+            description: newIncident.description,
+            location: newIncident.location,
+          }),
+        },
+        idempotencyKey
+      );
     }
-
-    return apiFetch<IncidentReport>("/incidents/json", {
-      method: "POST",
-      body: JSON.stringify({
-        farmId: newIncident.farmId,
-        incidentType: newIncident.incidentType,
-        animalType: newIncident.animalType,
-        numberAffected: newIncident.numberAffected,
-        dateTime: newIncident.dateTime,
-        description: newIncident.description,
-        location: newIncident.location,
-      }),
-    });
+    invalidateApiCache("/incidents");
+    invalidateApiCache("/farms");
+    return result;
   },
 
   async verifyIncident(
@@ -176,10 +248,14 @@ export const incidentService = {
     action: "validate" | "request_info" | "reject",
     notes?: string
   ): Promise<IncidentReport> {
-    return apiFetch<IncidentReport>(`/incidents/${incidentId}/verify`, {
+    const result = await apiFetch<IncidentReport>(`/incidents/${incidentId}/verify`, {
       method: "POST",
       body: JSON.stringify({ action, notes }),
     });
+    invalidateApiCache("/incidents");
+    invalidateApiCache("/farms");
+    invalidateApiCache("/corrective-actions");
+    return result;
   },
 
   async getRecommendedActions(
@@ -187,7 +263,7 @@ export const incidentService = {
     incidentType?: string
   ): Promise<RecommendedAction[]> {
     try {
-      return await apiFetch<RecommendedAction[]>(`/incidents/${incidentId}/recommended-actions`);
+      return await cachedApiGet<RecommendedAction[]>(`/incidents/${incidentId}/recommended-actions`);
     } catch (err) {
       if (incidentType && isNotFoundError(err)) {
         return getDefaultRecommendedActions(incidentType);
@@ -252,9 +328,9 @@ export const correctiveActionService = {
       });
   },
 
-  async getAction(actionId: string): Promise<CorrectiveAction> {
+  async getAction(actionId: string, options?: { force?: boolean }): Promise<CorrectiveAction> {
     try {
-      const action = await apiFetch<CorrectiveAction>(`/corrective-actions/${actionId}`);
+      const action = await cachedApiGet<CorrectiveAction>(`/corrective-actions/${actionId}`, options);
       return correctiveActionService.attachEvidenceAnalysis(action);
     } catch (err) {
       if (!isNotFoundError(err)) throw err;
@@ -277,10 +353,24 @@ export const correctiveActionService = {
     }
   },
 
-  async getActions(farmId?: string): Promise<CorrectiveAction[]> {
+  async getActions(farmId?: string, options?: { force?: boolean }): Promise<CorrectiveAction[]> {
     const query = farmId ? `?farmId=${encodeURIComponent(farmId)}` : "";
-    const list = await apiFetch<CorrectiveAction[]>(`/corrective-actions${query}`);
-    return list.map((a) => correctiveActionService.attachEvidenceAnalysis(a));
+    const path = `/corrective-actions${query}`;
+    const list = await cachedApiGet<CorrectiveAction[]>(path, options);
+    const mapped = list.map((a) => correctiveActionService.attachEvidenceAnalysis(a));
+    if (farmId) {
+      scheduleIdle(() => {
+        import("../offline/storage/cacheStore")
+          .then((m) => m.getCachedFarmBundle(farmId))
+          .then((cached) => {
+            if (cached) {
+              return cacheFarmBundle(farmId, { farm: cached.farm, correctiveActions: mapped });
+            }
+          })
+          .catch(() => undefined);
+      });
+    }
+    return mapped;
   },
 
   async createAction(payload: {
@@ -310,13 +400,20 @@ export const correctiveActionService = {
 
   async submitEvidence(
     actionId: string,
-    evidence: { file: File; notes: string; location: string }
+    evidence: { file: File; notes: string; location: string },
+    idempotencyKey?: string
   ): Promise<CorrectiveAction> {
     const form = new FormData();
     form.append("file", evidence.file);
     form.append("notes", evidence.notes);
     form.append("location", evidence.location);
-    const result = await apiFetchForm<CorrectiveAction>(`/corrective-actions/${actionId}/evidence`, form);
+    const result = await apiFetchForm<CorrectiveAction>(
+      `/corrective-actions/${actionId}/evidence`,
+      form,
+      "POST",
+      idempotencyKey
+    );
+    invalidateApiCache("/corrective-actions");
     return correctiveActionService.attachEvidenceAnalysis(result);
   },
 
@@ -333,15 +430,18 @@ export const correctiveActionService = {
   },
 
   async verifyAction(actionId: string, approved: boolean, notes?: string): Promise<CorrectiveAction> {
-    return apiFetch<CorrectiveAction>(`/corrective-actions/${actionId}/verify`, {
+    const result = await apiFetch<CorrectiveAction>(`/corrective-actions/${actionId}/verify`, {
       method: "POST",
       body: JSON.stringify({ approved, notes }),
     });
+    invalidateApiCache("/corrective-actions");
+    invalidateApiCache("/farms");
+    return result;
   },
 
-  async getAwaitingVerification(): Promise<CorrectiveAction[]> {
+  async getAwaitingVerification(options?: { force?: boolean }): Promise<CorrectiveAction[]> {
     try {
-      const list = await apiFetch<CorrectiveAction[]>("/corrective-actions/awaiting-verification");
+      const list = await cachedApiGet<CorrectiveAction[]>("/corrective-actions/awaiting-verification", options);
       return correctiveActionService.sortEvidenceQueue(
         list.map((a) => correctiveActionService.attachEvidenceAnalysis(a))
       );
@@ -362,59 +462,83 @@ export const correctiveActionService = {
 };
 
 export const riskService = {
-  async getRiskFactors(farmId?: string): Promise<RiskFactor[]> {
+  async getRiskFactors(farmId?: string, options?: { force?: boolean }): Promise<RiskFactor[]> {
     const query = farmId ? `?farmId=${encodeURIComponent(farmId)}` : "";
-    return apiFetch<RiskFactor[]>(`/risk/factors${query}`);
+    return cachedApiGet<RiskFactor[]>(`/risk/factors${query}`, options);
   },
 
-  async getRiskHistory(farmId: string, days = 7): Promise<{ time: string; score: number }[]> {
-    return apiFetch<{ time: string; score: number }[]>(
-      `/risk/farms/${farmId}/history?days=${days}`
+  async getRiskHistory(
+    farmId: string,
+    days = 7,
+    options?: { force?: boolean }
+  ): Promise<{ time: string; score: number }[]> {
+    return cachedApiGet<{ time: string; score: number }[]>(
+      `/risk/farms/${farmId}/history?days=${days}`,
+      options
     );
   },
 
-  async getRiskSummary(farmId: string): Promise<RiskSummary> {
-    return apiFetch<RiskSummary>(`/risk/farms/${farmId}/summary`);
+  async getRiskSummary(farmId: string, options?: { force?: boolean }): Promise<RiskSummary> {
+    return cachedApiGet<RiskSummary>(`/risk/farms/${farmId}/summary`, options);
   },
 
   async recalculateFarm(farmId: string): Promise<RiskSummary> {
-    return apiFetch<RiskSummary>(`/risk/farms/${farmId}/recalculate`, {
+    const result = await apiFetch<RiskSummary>(`/risk/farms/${farmId}/recalculate`, {
       method: "POST",
     });
+    invalidateApiCache("/risk/");
+    invalidateApiCache("/farms");
+    return result;
   },
 
-  async getScoreTimeline(farmId: string, days = 30): Promise<ScoreTimelineEvent[]> {
-    return apiFetch<ScoreTimelineEvent[]>(`/risk/farms/${farmId}/timeline?days=${days}`);
+  async getScoreTimeline(
+    farmId: string,
+    days = 30,
+    options?: { force?: boolean }
+  ): Promise<ScoreTimelineEvent[]> {
+    return cachedApiGet<ScoreTimelineEvent[]>(
+      `/risk/farms/${farmId}/timeline?days=${days}`,
+      options
+    );
   },
 };
 
 export const gisService = {
-  async getGisMapNodes(farmType?: string, riskLevel?: string): Promise<GisMapNode[]> {
+  async getGisMapNodes(
+    farmType?: string,
+    riskLevel?: string,
+    options?: { force?: boolean }
+  ): Promise<GisMapNode[]> {
     const params = new URLSearchParams();
     if (farmType && farmType !== "all") params.set("farmType", farmType);
     if (riskLevel && riskLevel !== "all") params.set("riskLevel", riskLevel);
     const query = params.toString() ? `?${params.toString()}` : "";
-    return apiFetch<GisMapNode[]>(`/gis/nodes${query}`);
+    return cachedApiGet<GisMapNode[]>(`/gis/nodes${query}`, options);
   },
 
-  async getSpatialRisk(farmId: string, radiusKm = 15): Promise<SpatialRiskResponse> {
-    return apiFetch<SpatialRiskResponse>(
-      `/gis/spatial-risk?farmId=${encodeURIComponent(farmId)}&radiusKm=${radiusKm}`
+  async getSpatialRisk(
+    farmId: string,
+    radiusKm = 15,
+    options?: { force?: boolean }
+  ): Promise<SpatialRiskResponse> {
+    return cachedApiGet<SpatialRiskResponse>(
+      `/gis/spatial-risk?farmId=${encodeURIComponent(farmId)}&radiusKm=${radiusKm}`,
+      options
     );
   },
 };
 
 export const officerService = {
-  async getOfficerStats(): Promise<OfficerStats> {
-    return apiFetch<OfficerStats>("/officer/stats");
+  async getOfficerStats(options?: { force?: boolean }): Promise<OfficerStats> {
+    return cachedApiGet<OfficerStats>("/officer/stats", options);
   },
 
-  async getInspectionPriority(): Promise<Farm[]> {
-    return apiFetch<Farm[]>("/officer/inspection-priority");
+  async getInspectionPriority(options?: { force?: boolean }): Promise<Farm[]> {
+    return cachedApiGet<Farm[]>("/officer/inspection-priority", options);
   },
 
-  async getScheduledInspections(): Promise<ScheduledInspection[]> {
-    return apiFetch<ScheduledInspection[]>("/officer/inspections");
+  async getScheduledInspections(options?: { force?: boolean }): Promise<ScheduledInspection[]> {
+    return cachedApiGet<ScheduledInspection[]>("/officer/inspections", options);
   },
 
   async scheduleInspection(
@@ -454,13 +578,62 @@ export const officerService = {
 };
 
 export const notificationService = {
-  async getNotifications(role?: UserRole): Promise<NotificationItem[]> {
+  async getNotifications(role?: UserRole, options?: { force?: boolean }): Promise<NotificationItem[]> {
     const query = role ? `?role=${encodeURIComponent(role)}` : "";
-    return apiFetch<NotificationItem[]>(`/notifications${query}`);
+    return cachedApiGet<NotificationItem[]>(`/notifications${query}`, options);
   },
 
   async markAsRead(id: string): Promise<void> {
     await apiFetch<void>(`/notifications/${id}/read`, { method: "PATCH" });
+  },
+};
+
+export interface HealthRecord {
+  id: string;
+  farmId: string;
+  animalType: string;
+  batchName?: string | null;
+  zoneId?: string | null;
+  healthStatus: string;
+  mortalityCount: number;
+  morbidityCount: number;
+  vaccinationDate?: string | null;
+  notes?: string | null;
+  recordedAt: string;
+}
+
+export const healthRecordService = {
+  async listRecords(farmId: string): Promise<HealthRecord[]> {
+    return apiFetch<HealthRecord[]>(`/health-records/farms/${farmId}`);
+  },
+
+  async createRecord(
+    farmId: string,
+    payload: {
+      animalType: string;
+      healthStatus: string;
+      notes?: string;
+      batchName?: string;
+      mortalityCount?: number;
+      morbidityCount?: number;
+    },
+    idempotencyKey?: string
+  ): Promise<HealthRecord> {
+    return apiFetch<HealthRecord>(
+      `/health-records/farms/${farmId}`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          animalType: payload.animalType,
+          healthStatus: payload.healthStatus,
+          notes: payload.notes,
+          batchName: payload.batchName,
+          mortalityCount: payload.mortalityCount ?? 0,
+          morbidityCount: payload.morbidityCount ?? 0,
+        }),
+      },
+      idempotencyKey
+    );
   },
 };
 

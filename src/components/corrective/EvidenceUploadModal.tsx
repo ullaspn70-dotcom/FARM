@@ -7,6 +7,7 @@ import { useNotifications } from "../../context/NotificationContext";
 import { useTranslation } from "../../context/LocaleContext";
 import { translateContent } from "../../i18n/contentTranslate";
 import { translateData } from "../../i18n/dataTranslations";
+import { isOnlineForSync, queueEvidenceSubmitOffline } from "../../offline/offlineBridge";
 
 interface EvidenceUploadModalProps {
   action: CorrectiveAction | null;
@@ -30,6 +31,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
   const [notes, setNotes] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [savedOffline, setSavedOffline] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const localeTag =
@@ -64,6 +66,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
       setNotes("");
       setSubmitError("");
       setSubmitSuccess(false);
+      setSavedOffline(false);
       setSubmitting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -80,6 +83,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!evidenceFile) {
       setSubmitError(t("evidence.errorNoFile"));
       fileInputRef.current?.click();
@@ -88,18 +92,54 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
 
     setSubmitting(true);
     setSubmitError("");
+    const evidencePayload = {
+      file: evidenceFile,
+      notes: notes || t("evidence.defaultNotes"),
+      location: locationTag,
+    };
+
     try {
-      await correctiveActionService.submitEvidence(action.id, {
-        file: evidenceFile,
-        notes: notes || t("evidence.defaultNotes"),
-        location: locationTag,
-      });
+      const online = await isOnlineForSync();
+      if (!online) {
+        await queueEvidenceSubmitOffline({
+          actionId: action.id,
+          file: evidenceFile,
+          notes: evidencePayload.notes,
+          location: evidencePayload.location,
+        });
+        setSavedOffline(true);
+        setSubmitSuccess(true);
+        setSubmitting(false);
+        window.setTimeout(() => onClose(), 1400);
+        return;
+      }
+
+      await correctiveActionService.submitEvidence(action.id, evidencePayload);
       setSubmitSuccess(true);
       await refreshNotifications();
       onSubmitted();
       window.setTimeout(() => onClose(), 900);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : t("evidence.errorUpload"));
+      const online = await isOnlineForSync();
+      if (!online) {
+        try {
+          await queueEvidenceSubmitOffline({
+            actionId: action.id,
+            file: evidenceFile,
+            notes: evidencePayload.notes,
+            location: evidencePayload.location,
+          });
+          setSavedOffline(true);
+          setSubmitSuccess(true);
+          setSubmitting(false);
+          window.setTimeout(() => onClose(), 1400);
+          return;
+        } catch (queueErr) {
+          setSubmitError(queueErr instanceof Error ? queueErr.message : t("evidence.errorUpload"));
+        }
+      } else {
+        setSubmitError(err instanceof Error ? err.message : t("evidence.errorUpload"));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -176,7 +216,11 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
           {submitSuccess && (
             <div className="form-success-banner" role="status">
               <CheckCircle2 size={16} />
-              <span>{t("evidence.success")}</span>
+              <span>
+                {savedOffline
+                  ? "📷 Evidence saved locally — waiting for upload when online."
+                  : t("evidence.success")}
+              </span>
             </div>
           )}
 

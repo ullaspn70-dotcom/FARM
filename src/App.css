@@ -1734,3 +1734,76 @@
 .evidence-link-banner { background: #EFF6FF; border: 1px solid #BFDBFE; padding: 12px 16px; border-radius: 10px; }
 .timeline-incident_verified { border-left-color: #DC2626; }
 .timeline-action_closed { border-left-color: #16A34A; }
+
+/* Offline / sync UI */
+.offline-banner {
+  background: #FEF3C7;
+  border-bottom: 1px solid #FCD34D;
+  color: #92400E;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.offline-banner-warn { background: #FEE2E2; border-color: #FECACA; color: #991B1B; }
+.offline-banner-sync { background: #DBEAFE; border-color: #93C5FD; color: #1E40AF; }
+
+.sync-status-wrap { position: relative; }
+.sync-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sync-status-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 260px;
+  background: #fff;
+  color: #0F172A;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+  padding: 12px;
+  z-index: 200;
+}
+.sync-panel-title { margin: 0 0 8px; font-size: 13px; font-weight: 800; }
+.sync-counts { display: grid; gap: 4px; font-size: 12px; margin-bottom: 8px; }
+.sync-panel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sync-panel-actions .btn-secondary { font-size: 12px; padding: 6px 10px; }
+
+.local-sync-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #B45309;
+  background: #FEF3C7;
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-left: auto;
+}
+.local-sync-msg { font-size: 12px; color: #B45309; margin-top: 8px; }
+.health-observation-box {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.evidence-thumb-placeholder {
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F1F5F9;
+  border-radius: 8px;
+}

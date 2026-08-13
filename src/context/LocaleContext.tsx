@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   isLocaleCode,
+  loadLocale,
   STORAGE_KEY,
   suggestLocaleFromLocation,
   translate,
@@ -17,6 +18,7 @@ interface LocaleContextValue {
   suggestedLocale: LocaleCode | null;
   localeOptions: typeof LOCALE_OPTIONS;
   suggestFromFarmLocation: (location: string) => void;
+  localeReady: boolean;
 }
 const LANGUAGE_MODE_KEY = "agrisentinel_language_mode";
 type LanguageMode = "auto" | "manual";
@@ -30,12 +32,25 @@ function readStoredLocale(): LocaleCode {
 
 export const LocaleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [locale, setLocaleState] = useState<LocaleCode>(readStoredLocale);
+  const [localeReady, setLocaleReady] = useState(locale === "en");
   const [suggestedLocale, setSuggestedLocale] = useState<LocaleCode | null>(null);
 
   const [languageMode, setLanguageModeState] = useState<LanguageMode>(() => {
     const stored = localStorage.getItem(LANGUAGE_MODE_KEY);
     return stored === "auto" ? "auto" : "manual";
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    setLocaleReady(locale === "en");
+    void loadLocale(locale).then(() => {
+      if (!cancelled) setLocaleReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
+
   const setLocale = useCallback((code: LocaleCode) => {
     setLocaleState(code);
     setLanguageModeState("manual");
@@ -43,6 +58,7 @@ export const LocaleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.setItem(LANGUAGE_MODE_KEY, "manual");
     document.documentElement.lang = code;
   }, []);
+
   const setLanguageMode = useCallback((mode: LanguageMode) => {
     setLanguageModeState(mode);
     localStorage.setItem(LANGUAGE_MODE_KEY, mode);
@@ -77,8 +93,9 @@ export const LocaleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       suggestedLocale,
       localeOptions: LOCALE_OPTIONS,
       suggestFromFarmLocation,
+      localeReady,
     }),
-    [locale, setLocale, languageMode, setLanguageMode, t, suggestedLocale, suggestFromFarmLocation]
+    [locale, setLocale, languageMode, setLanguageMode, t, suggestedLocale, suggestFromFarmLocation, localeReady]
   );
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 };
@@ -98,6 +115,7 @@ export function useTranslation() {
     setLanguageMode,
     suggestedLocale,
     localeOptions,
+    localeReady,
   } = useLocale();
   return {
     t,
@@ -107,5 +125,6 @@ export function useTranslation() {
     setLanguageMode,
     suggestedLocale,
     localeOptions,
+    localeReady,
   };
 }

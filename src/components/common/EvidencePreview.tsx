@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ExternalLink, Image, FileText } from "lucide-react";
 import { isImageFile, isPdfFile, resolveMediaUrl } from "../../utils/mediaUrl";
 import { useTranslation } from "../../context/LocaleContext";
@@ -21,6 +21,26 @@ export const EvidencePreview: React.FC<EvidencePreviewProps> = ({
   const showImage = mediaUrl && isImageFile(fileName || mediaUrl);
   const showPdf = mediaUrl && isPdfFile(fileName || mediaUrl);
   const [imageFailed, setImageFailed] = useState(false);
+  const [shouldLoadImage, setShouldLoadImage] = useState(compact);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (compact || !showImage || shouldLoadImage) return;
+    const node = containerRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoadImage(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "120px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [compact, showImage, shouldLoadImage]);
 
   if (!mediaUrl) {
     return (
@@ -35,7 +55,10 @@ export const EvidencePreview: React.FC<EvidencePreviewProps> = ({
   }
 
   return (
-    <div className={`evidence-file-card evidence-file-card-rich ${compact ? "evidence-compact" : ""}`}>
+    <div
+      ref={containerRef}
+      className={`evidence-file-card evidence-file-card-rich ${compact ? "evidence-compact" : ""}`}
+    >
       {showImage && !imageFailed ? (
         <a
           href={mediaUrl}
@@ -43,12 +66,20 @@ export const EvidencePreview: React.FC<EvidencePreviewProps> = ({
           rel="noopener noreferrer"
           className="evidence-thumb-link"
         >
-          <img
-            src={mediaUrl}
-            alt={fileName}
-            className="evidence-thumb-image"
-            onError={() => setImageFailed(true)}
-          />
+          {shouldLoadImage ? (
+            <img
+              src={mediaUrl}
+              alt={fileName}
+              className="evidence-thumb-image"
+              loading="lazy"
+              decoding="async"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <div className="evidence-thumb-placeholder" aria-hidden>
+              <Image size={24} className="file-icon" />
+            </div>
+          )}
         </a>
       ) : showPdf ? (
         <FileText size={32} className="file-icon" />

@@ -28,8 +28,8 @@ export const VetEvidenceInspectionView: React.FC = () => {
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [displayEvidence, setDisplayEvidence] = useState<CorrectiveAction["submittedEvidence"]>(undefined);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
     try {
       let list = await correctiveActionService.getAwaitingVerification();
       list = list.filter(
@@ -52,8 +52,8 @@ export const VetEvidenceInspectionView: React.FC = () => {
 
   useEffect(() => {
     load();
-    const timer = window.setInterval(load, 12000);
-    const onFocus = () => load();
+    const timer = window.setInterval(() => load({ silent: true }), 12000);
+    const onFocus = () => load({ silent: true });
     window.addEventListener("focus", onFocus);
     return () => {
       window.clearInterval(timer);

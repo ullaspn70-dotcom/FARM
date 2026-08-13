@@ -54,7 +54,7 @@ export const ScoreHistoryPanel: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeFarm.id, activeFarm.biosecurityScore]);
+  }, [activeFarm.id]);
 
   const scoreDelta = summary
     ? summary.biosecurityScore - summary.previousScore

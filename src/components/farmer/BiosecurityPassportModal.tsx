@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   ScanLine,
 } from "lucide-react";
-import QRCode from "qrcode";
 import type { BiosecurityPassport } from "../../types";
 import { passportService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
@@ -76,11 +75,14 @@ export const BiosecurityPassportModal: React.FC<BiosecurityPassportModalProps> =
       return;
     }
 
-    QRCode.toDataURL(buildQrPayload(passport), {
-      width: 160,
-      margin: 2,
-      errorCorrectionLevel: "M",
-    })
+    import("qrcode")
+      .then((QRCode) =>
+        QRCode.toDataURL(buildQrPayload(passport), {
+          width: 160,
+          margin: 2,
+          errorCorrectionLevel: "M",
+        })
+      )
       .then(setQrDataUrl)
       .catch(() => setQrDataUrl(""));
   }, [passport]);

@@ -17,6 +17,14 @@ import { translateData } from "../../i18n/dataTranslations";
 import { StatusBadge } from "../common/StatusBadge";
 import { farmService, incidentService, riskService } from "../../services/api";
 import type { ChecklistItem, IncidentReport, RiskFactor } from "../../types";
+import { useSync } from "../../context/SyncContext";
+import {
+  cacheAfterOnlineFetch,
+  getCachedChecklist,
+  getCachedIncidents,
+  queueChecklistUpdateOffline,
+  queueHealthObservationOffline,
+} from "../../offline/offlineBridge";
 
 interface FarmerDashboardProps {
   onOpenPassport: () => void;
@@ -35,10 +43,16 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
   const { activeFarm } = useAuth();
   const { t, locale } = useTranslation();
   const { suggestFromFarmLocation } = useLocale();
+  const { connectivity } = useSync();
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [riskFactors, setRiskFactors] = useState<RiskFactor[]>([]);
   const [loadError, setLoadError] = useState("");
+  const [locallySavedItems, setLocallySavedItems] = useState<Record<string, boolean>>({});
+  const [healthType, setHealthType] = useState("Poultry (Broilers)");
+  const [healthStatus, setHealthStatus] = useState("Healthy");
+  const [healthNotes, setHealthNotes] = useState("");
+  const [healthSavedMsg, setHealthSavedMsg] = useState("");
 
   useEffect(() => {
     suggestFromFarmLocation(activeFarm.location);
@@ -51,28 +65,66 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
     Promise.all([
       farmService.getChecklist(activeFarm.id),
       incidentService.getIncidents(activeFarm.id),
-      riskService.getRiskFactors(activeFarm.id),
     ])
-      .then(([checklistItems, farmIncidents, factors]) => {
+      .then(async ([checklistItems, farmIncidents]) => {
         if (!cancelled) {
+          await cacheAfterOnlineFetch(activeFarm.id, {
+            farm: activeFarm,
+            checklist: checklistItems,
+            incidents: farmIncidents,
+          });
           setChecklist(checklistItems);
           setIncidents(farmIncidents);
-          setRiskFactors(factors);
+          setLoadError("");
         }
       })
-      .catch(() => {
+      .catch(async () => {
         if (!cancelled) {
-          setChecklist([]);
-          setIncidents([]);
-          setRiskFactors([]);
-          setLoadError(t("dashboard.loadError"));
+          const cachedChecklist = await getCachedChecklist(activeFarm.id);
+          const cachedIncidents = await getCachedIncidents(activeFarm.id);
+          setChecklist(cachedChecklist ?? []);
+          setIncidents(cachedIncidents ?? []);
+          setLoadError(
+            cachedChecklist || cachedIncidents
+              ? "Showing cached data — some information may be outdated."
+              : t("dashboard.loadError")
+          );
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [activeFarm.id, activeFarm.biosecurityScore, t]);
+  }, [activeFarm.id, t]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRiskFactors = () => {
+      riskService
+        .getRiskFactors(activeFarm.id)
+        .then((factors) => {
+          if (!cancelled) setRiskFactors(factors);
+        })
+        .catch(() => {
+          if (!cancelled) setRiskFactors([]);
+        });
+    };
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(loadRiskFactors, { timeout: 2000 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(idleId);
+      };
+    }
+
+    const timer = setTimeout(loadRiskFactors, 50);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [activeFarm.id]);
 
   const completedCount = checklist.filter((c) => c.completed).length;
   const scoreDelta = activeFarm.biosecurityScore - activeFarm.previousScore;
@@ -88,6 +140,13 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
       )
     );
 
+    const offline = connectivity !== "ONLINE";
+    if (offline) {
+      await queueChecklistUpdateOffline(activeFarm.id, item.id, nextCompleted, item.completed);
+      setLocallySavedItems((prev) => ({ ...prev, [item.id]: true }));
+      return;
+    }
+
     try {
       const updated = await farmService.updateChecklistItem(
         activeFarm.id,
@@ -97,12 +156,52 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
       setChecklist((prev) =>
         prev.map((entry) => (entry.id === item.id ? updated : entry))
       );
+      setLocallySavedItems((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
     } catch {
       setChecklist((prev) =>
         prev.map((entry) =>
           entry.id === item.id ? { ...entry, completed: item.completed } : entry
         )
       );
+    }
+  };
+
+  const saveHealthObservation = async () => {
+    setHealthSavedMsg("");
+    const offline = connectivity !== "ONLINE";
+    if (offline) {
+      await queueHealthObservationOffline({
+        farmId: activeFarm.id,
+        observationType: healthType,
+        value: healthStatus,
+        notes: healthNotes,
+      });
+      setHealthSavedMsg("Health observation saved locally — will sync when online.");
+      setHealthNotes("");
+      return;
+    }
+    try {
+      const { healthRecordService } = await import("../../services/api");
+      await healthRecordService.createRecord(activeFarm.id, {
+        animalType: healthType,
+        healthStatus,
+        notes: healthNotes,
+      });
+      setHealthSavedMsg("Health observation recorded.");
+      setHealthNotes("");
+    } catch {
+      await queueHealthObservationOffline({
+        farmId: activeFarm.id,
+        observationType: healthType,
+        value: healthStatus,
+        notes: healthNotes,
+      });
+      setHealthSavedMsg("Saved locally — will sync when connection returns.");
+      setHealthNotes("");
     }
   };
 
@@ -296,12 +395,49 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                     {item.completed && <CheckCircle2 size={16} />}
                   </div>
                   <span className="item-label">{translateContent(item.title, t)}</span>
+                  {locallySavedItems[item.id] && (
+                    <span className="local-sync-tag">✓ Saved locally</span>
+                  )}
                   {!item.completed && (
                     <span className="action-tag-urgent">{t("dashboard.actionDue")}</span>
                   )}
                 </div>
               ))
             )}
+          </div>
+
+          <div className="health-observation-box">
+            <h4 className="panel-subtitle">Health observation</h4>
+            <div className="form-grid-two">
+              <select
+                className="form-input"
+                value={healthType}
+                onChange={(e) => setHealthType(e.target.value)}
+              >
+                <option value="Poultry (Broilers)">Poultry (Broilers)</option>
+                <option value="Swine / Pigs (Growers)">Swine / Pigs (Growers)</option>
+              </select>
+              <select
+                className="form-input"
+                value={healthStatus}
+                onChange={(e) => setHealthStatus(e.target.value)}
+              >
+                <option value="Healthy">Healthy</option>
+                <option value="Monitored">Monitored</option>
+                <option value="Concern">Concern</option>
+              </select>
+            </div>
+            <textarea
+              className="form-textarea"
+              rows={2}
+              placeholder="Notes (optional)"
+              value={healthNotes}
+              onChange={(e) => setHealthNotes(e.target.value)}
+            />
+            <button type="button" className="btn-secondary-action" onClick={() => void saveHealthObservation()}>
+              Record observation
+            </button>
+            {healthSavedMsg && <p className="local-sync-msg">{healthSavedMsg}</p>}
           </div>
         </div>
 
@@ -330,6 +466,9 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                   <div className="timeline-content">
                     <div className="timeline-header">
                       <strong>{translateContent(incident.incidentType, t)}</strong>
+                      {incident.id.startsWith("LOCAL-") && (
+                        <span className="local-sync-tag">🟠 Pending sync</span>
+                      )}
                       <span className="timeline-time">
                         {new Date(incident.dateTime).toLocaleTimeString([], {
                           hour: "2-digit",

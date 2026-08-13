@@ -5,6 +5,7 @@ import { useNotifications } from "../../context/NotificationContext";
 import { useTranslation } from "../../context/LocaleContext";
 import { translateData } from "../../i18n/dataTranslations";
 import { LanguageSelector } from "./LanguageSelector";
+import { SyncStatusIndicator } from "./SyncStatusIndicator";
 
 interface NavbarProps {
   onToggleMobileNav?: () => void;
@@ -64,6 +65,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
 
         {/* Right: Farm Selector & Notification Bell */}
         <div className="navbar-right">
+          <SyncStatusIndicator />
+
           <div className="live-badge">
             <span className="live-ping"></span>
             <span>{t("role.liveMonitor")}</span>
