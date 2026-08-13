@@ -22,10 +22,10 @@ import { analyzeEvidenceLocally, isVeterinaryActionPlan, VET_PLAN_MARKER } from 
 import type { EvidenceAnalysis } from "../types";
 import { cacheFarmBundle } from "../offline/storage/cacheStore";
 import { cachedGet, cacheKey, invalidateApiCache, DEFAULT_CACHE_TTL_MS } from "./apiCache";
+import { resolveApiBase, API_V1_PREFIX } from "../config/apiBase";
+import { connectivityService } from "../offline/connectivity/connectivityService";
 
 export { invalidateApiCache, DEFAULT_CACHE_TTL_MS as API_CACHE_TTL_MS };
-
-const PRODUCTION_API = "https://agrisentinel-api.onrender.com";
 
 function isNotFoundError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
@@ -33,17 +33,16 @@ function isNotFoundError(err: unknown): boolean {
   return msg.includes("404") || msg.includes("not found");
 }
 
-function resolveApiBase(): string {
-  const configured = import.meta.env.VITE_API_BASE_URL?.trim();
-  if (configured) return configured.replace(/\/$/, "");
-  if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
-    return PRODUCTION_API;
-  }
-  return "http://localhost:8000";
+function resolveApiBaseLocal(): string {
+  return resolveApiBase();
 }
 
-const API_BASE = resolveApiBase();
-const API_V1 = `${API_BASE}/api/v1`;
+const API_BASE = resolveApiBaseLocal();
+const API_V1 = `${API_BASE.replace(/\/api\/v1\/?$/, "")}${API_V1_PREFIX}`;
+
+function markApiSuccess(): void {
+  connectivityService.reportApiSuccess();
+}
 
 function scheduleIdle(task: () => void): void {
   if (typeof window !== "undefined" && "requestIdleCallback" in window) {
@@ -103,6 +102,7 @@ async function apiFetchForm<T>(
     throw new Error(parseApiError(text, response.status));
   }
 
+  markApiSuccess();
   return response.json() as Promise<T>;
 }
 
@@ -125,9 +125,11 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, idempotencyK
   }
 
   if (response.status === 204) {
+    markApiSuccess();
     return undefined as T;
   }
 
+  markApiSuccess();
   return response.json() as Promise<T>;
 }
 
