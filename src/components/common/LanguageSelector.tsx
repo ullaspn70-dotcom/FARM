@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Globe, ChevronDown, Check } from "lucide-react";
-import { useTranslation } from "../../context/LocaleContext";
+import { useAuth } from "../../context/AuthContext";
+import { useLocale, useTranslation } from "../../context/LocaleContext";
 import type { LocaleCode } from "../../i18n/types";
 
 interface LanguageSelectorProps {
@@ -8,7 +9,18 @@ interface LanguageSelectorProps {
 }
 
 export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ compact = false }) => {
-  const { locale, setLocale, t, suggestedLocale, localeOptions } = useTranslation();
+  const {
+    locale,
+    setLocale,
+    languageMode,
+    setLanguageMode,
+    t,
+    suggestedLocale,
+    localeOptions,
+  } = useTranslation();
+
+  const { suggestFromFarmLocation } = useLocale();
+  const { activeFarm } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -24,6 +36,12 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ compact = fa
 
   const handleSelect = (code: LocaleCode) => {
     setLocale(code);
+    setOpen(false);
+  };
+
+  const handleAutoSelect = () => {
+    setLanguageMode("auto");
+    suggestFromFarmLocation(activeFarm.location);
     setOpen(false);
   };
 
@@ -43,6 +61,27 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ compact = fa
 
       {open && (
         <div className="language-selector-menu" role="listbox">
+          <button
+            type="button"
+            role="option"
+            aria-selected={languageMode === "auto"}
+            className={`language-option ${languageMode === "auto" ? "active" : ""}`}
+            onClick={handleAutoSelect}
+          >
+            <span className="language-native">
+              Auto — Farm State
+            </span>
+
+            {languageMode === "auto" && suggestedLocale && (
+              <span className="language-english">
+                {localeOptions.find((o) => o.code === suggestedLocale)?.nativeLabel}
+              </span>
+            )}
+
+            {languageMode === "auto" && (
+              <Check size={14} className="language-check" />
+            )}
+          </button>
           {suggestedLocale && suggestedLocale !== locale && (
             <div className="language-suggestion-banner">
               {t("language.suggested")}:{" "}

@@ -13,6 +13,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useLocale, useTranslation } from "../../context/LocaleContext";
 import { translateContent } from "../../i18n/contentTranslate";
+import { translateData } from "../../i18n/dataTranslations";
 import { StatusBadge } from "../common/StatusBadge";
 import { farmService, incidentService, riskService } from "../../services/api";
 import type { ChecklistItem, IncidentReport, RiskFactor } from "../../types";
@@ -32,7 +33,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
   onNavigateToRisk,
 }) => {
   const { activeFarm } = useAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { suggestFromFarmLocation } = useLocale();
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
@@ -133,12 +134,17 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
           <div className="farm-type-pills">
             <StatusBadge type="farmType" value={activeFarm.farmType} />
             <span className="farm-id-code">{t("common.farmId")}: {activeFarm.id}</span>
-            <span className="location-tag">📍 {activeFarm.location}</span>
+            <span className="location-tag">
+  📍         {translateData(activeFarm.location, locale)}
+            </span>
           </div>
 
-          <h2 className="farm-title-name">{activeFarm.name}</h2>
+          <h2 className="farm-title-name">
+            {translateData(activeFarm.name, locale)}
+          </h2>
           <p className="farm-subtitle">
-            {t("dashboard.registeredOwner")}: <strong>{activeFarm.owner}</strong> •{" "}
+            {t("dashboard.registeredOwner")}:{" "}
+            <strong>{translateData(activeFarm.owner, locale)}</strong> •{" "}
             {t("dashboard.totalPopulation")}:{" "}
             <strong>
               {activeFarm.animalCount.toLocaleString()} {animalLabel}
