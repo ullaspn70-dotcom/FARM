@@ -72,7 +72,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [activeFarm.id, t]);
+  }, [activeFarm.id, activeFarm.biosecurityScore, t]);
 
   const completedCount = checklist.filter((c) => c.completed).length;
   const scoreDelta = activeFarm.biosecurityScore - activeFarm.previousScore;

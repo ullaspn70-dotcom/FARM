@@ -20,6 +20,7 @@ interface AuthContextType {
   activeFarm: Farm;
   setActiveFarm: (farm: Farm) => void;
   allFarms: Farm[];
+  refreshFarms: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +47,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch(() => {
         // Backend unavailable — keep initial mock farm for offline/demo fallback
       });
+
+    const onFocus = () => {
+      loadFarms().catch(() => undefined);
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
   const setRole = async (nextRole: UserRole) => {
@@ -66,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeFarm,
         setActiveFarm,
         allFarms,
+        refreshFarms: loadFarms,
       }}
     >
       {children}

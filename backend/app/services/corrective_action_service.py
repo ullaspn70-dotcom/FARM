@@ -119,9 +119,15 @@ class CorrectiveActionService:
         ):
             raise ConflictError("Action is not awaiting verification.")
 
+        farm = action.farm
         if payload.approved:
             action.status = CorrectiveActionStatus.VERIFIED
             action.verification_status = VerificationStatus.VERIFIED
+            if action.incident_id:
+                RiskEngine.update_incident_factor_progress(db, action.incident_id)
+            old_score = RiskEngine.recalculate_farm(db, farm)
+            RiskEngine.update_farm_counters(db, farm)
+            RiskEngine.notify_score_change(db, farm, old_score)
             CorrectiveActionService._check_compliance_closure(db, action.farm_id)
         else:
             action.status = CorrectiveActionStatus.IN_PROGRESS
@@ -150,4 +156,3 @@ class CorrectiveActionService:
             passport = db.query(BiosecurityPassport).filter(BiosecurityPassport.farm_id == farm_id).first()
             if passport:
                 passport.compliance_status = ComplianceStatus.COMPLIANT
-            RiskEngine.recalculate_farm(db, farm)

@@ -11,7 +11,7 @@ import { translateContent } from "../../i18n/contentTranslate";
 import { translateData } from "../../i18n/dataTranslations";
 
 export const CorrectiveActionsList: React.FC = () => {
-  const { role, activeFarm } = useAuth();
+  const { role, activeFarm, refreshFarms } = useAuth();
   const { t, locale } = useTranslation();
   const [actions, setActions] = useState<CorrectiveAction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +43,8 @@ export const CorrectiveActionsList: React.FC = () => {
 
   const handleVerify = async (actionId: string, approve: boolean) => {
     await correctiveActionService.verifyAction(actionId, approve);
-    fetchActions();
+    await fetchActions();
+    await refreshFarms();
   };
 
   return (

@@ -88,13 +88,14 @@ class IncidentService:
         RiskEngine.add_factor(
             db,
             farm.id,
-            f"Incident reported: {payload.incident_type}",
-            12 if severity in (IncidentSeverity.HIGH, IncidentSeverity.CRITICAL) else 6,
+            RiskEngine.incident_factor_label(incident.id, payload.incident_type),
+            RiskEngine.incident_penalty(severity),
             RiskFactorCategory.INCIDENT,
             payload.description[:250],
         )
-        RiskEngine.recalculate_farm(db, farm)
+        old_score = RiskEngine.recalculate_farm(db, farm)
         RiskEngine.update_farm_counters(db, farm)
+        RiskEngine.notify_score_change(db, farm, old_score)
 
         NotificationService.create(
             db,
@@ -135,8 +136,17 @@ class IncidentService:
             incident.status = IncidentStatus.REJECTED
             incident.veterinarian_notes = payload.notes or "Non-critical environmental anomaly. No bio-hazard detected."
             title = "Incident Rejected"
+            RiskEngine.deactivate_incident_factors(db, incident.farm_id, incident.id)
+            farm = incident.farm
+            old_score = RiskEngine.recalculate_farm(db, farm)
+            RiskEngine.update_farm_counters(db, farm)
+            RiskEngine.notify_score_change(db, farm, old_score)
         else:
             raise ValidationAppError("Invalid verification action.")
+
+        if action != "reject":
+            farm = incident.farm
+            RiskEngine.update_farm_counters(db, farm)
 
         NotificationService.create(
             db,

@@ -19,7 +19,7 @@ import { AarohiAdvisorModal } from "./components/common/AarohiAdvisorModal";
 import "./App.css";
 
 function AppContent() {
-  const { role } = useAuth();
+  const { role, refreshFarms } = useAuth();
 
   const [activeTab, setActiveTab] = useState<NavTab>("overview");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -110,6 +110,9 @@ function AppContent() {
       <IncidentReportForm
         isOpen={isReportIncidentOpen}
         onClose={() => setIsReportIncidentOpen(false)}
+        onSubmitted={() => {
+          void refreshFarms();
+        }}
       />
 
       <AarohiAdvisorModal
