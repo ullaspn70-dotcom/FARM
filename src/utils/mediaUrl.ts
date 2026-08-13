@@ -1,4 +1,15 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const PRODUCTION_API = "https://agrisentinel-api.onrender.com";
+
+function resolveApiBase(): string {
+  const configured = import.meta.env.VITE_API_BASE_URL?.trim();
+  if (configured) return configured.replace(/\/$/, "");
+  if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
+    return PRODUCTION_API;
+  }
+  return "http://localhost:8000";
+}
+
+const API_BASE = resolveApiBase();
 
 /** Resolve uploaded file URLs from API (handles relative paths, legacy localhost, and data URLs). */
 export function resolveMediaUrl(url: string | undefined | null): string {

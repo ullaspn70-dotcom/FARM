@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { ExternalLink, Image, FileText } from "lucide-react";
 import { isImageFile, isPdfFile, resolveMediaUrl } from "../../utils/mediaUrl";
 import { useTranslation } from "../../context/LocaleContext";
@@ -20,6 +20,7 @@ export const EvidencePreview: React.FC<EvidencePreviewProps> = ({
   const mediaUrl = resolveMediaUrl(fileUrl);
   const showImage = mediaUrl && isImageFile(fileName || mediaUrl);
   const showPdf = mediaUrl && isPdfFile(fileName || mediaUrl);
+  const [imageFailed, setImageFailed] = useState(false);
 
   if (!mediaUrl) {
     return (
@@ -35,14 +36,19 @@ export const EvidencePreview: React.FC<EvidencePreviewProps> = ({
 
   return (
     <div className={`evidence-file-card evidence-file-card-rich ${compact ? "evidence-compact" : ""}`}>
-      {showImage ? (
+      {showImage && !imageFailed ? (
         <a
           href={mediaUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="evidence-thumb-link"
         >
-          <img src={mediaUrl} alt={fileName} className="evidence-thumb-image" />
+          <img
+            src={mediaUrl}
+            alt={fileName}
+            className="evidence-thumb-image"
+            onError={() => setImageFailed(true)}
+          />
         </a>
       ) : showPdf ? (
         <FileText size={32} className="file-icon" />
@@ -51,6 +57,9 @@ export const EvidencePreview: React.FC<EvidencePreviewProps> = ({
       )}
       <div className="evidence-file-meta">
         <strong className="file-name">{fileName}</strong>
+        {imageFailed && (
+          <span className="text-muted evidence-load-fail">{t("vet.evidence.reloadHint")}</span>
+        )}
         {notes && <p className="evidence-notes-preview">{notes}</p>}
         <a
           href={mediaUrl}

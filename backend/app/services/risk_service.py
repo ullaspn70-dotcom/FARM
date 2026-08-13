@@ -81,8 +81,33 @@ class RiskEngine:
         )
 
     @staticmethod
+    def cleanup_stale_incident_factors(db: Session, farm_id: str) -> None:
+        incidents = db.query(Incident).filter(Incident.farm_id == farm_id).all()
+        for incident in incidents:
+            if incident.status == IncidentStatus.REJECTED:
+                RiskEngine.deactivate_incident_factors(db, farm_id, incident.id)
+                continue
+            if incident.status == IncidentStatus.VERIFIED:
+                total_actions = (
+                    db.query(func.count(CorrectiveAction.id))
+                    .filter(CorrectiveAction.incident_id == incident.id)
+                    .scalar()
+                ) or 0
+                verified_actions = (
+                    db.query(func.count(CorrectiveAction.id))
+                    .filter(
+                        CorrectiveAction.incident_id == incident.id,
+                        CorrectiveAction.status == CorrectiveActionStatus.VERIFIED,
+                    )
+                    .scalar()
+                ) or 0
+                if total_actions == 0 or verified_actions >= total_actions:
+                    RiskEngine.deactivate_incident_factors(db, farm_id, incident.id)
+
+    @staticmethod
     def recalculate_farm(db: Session, farm: Farm) -> int:
         """Recalculate score from passport baseline minus active risk penalties. Returns old score."""
+        RiskEngine.cleanup_stale_incident_factors(db, farm.id)
         old_score = farm.biosecurity_score
         baseline = RiskEngine.get_baseline_score(db, farm)
         active_factors = (
@@ -256,15 +281,17 @@ class RiskEngine:
     @staticmethod
     def get_summary(db: Session, farm: Farm) -> dict:
         history = RiskEngine.get_history(db, farm.id, days=7)
-        score_delta = farm.biosecurity_score - (history[0].score if history else farm.previous_score)
+        baseline = history[0].score if history else farm.previous_score
+        score_delta = farm.biosecurity_score - baseline
         trend = "improving" if score_delta > 0 else "deteriorating" if score_delta < 0 else "stable"
+        risk_level = farm.risk_level.value if hasattr(farm.risk_level, "value") else str(farm.risk_level)
         return {
-            "farmId": farm.id,
-            "biosecurityScore": farm.biosecurity_score,
-            "previousScore": farm.previous_score,
-            "riskLevel": farm.risk_level.value,
-            "scoreDelta7d": score_delta,
-            "riskTrend": trend,
+            "farm_id": farm.id,
+            "biosecurity_score": farm.biosecurity_score,
+            "previous_score": farm.previous_score,
+            "risk_level": risk_level,
+            "score_delta_7d": score_delta,
+            "risk_trend": trend,
         }
 
     @staticmethod

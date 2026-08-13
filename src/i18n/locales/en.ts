@@ -248,6 +248,7 @@ const en: TranslationDictionary = {
 
   "vet.evidence.open": "Open evidence file",
   "vet.evidence.unavailable": "File URL unavailable — re-upload may be required.",
+  "vet.evidence.reloadHint": "Preview failed — click Open evidence file (upload a new photo if link is old).",
 
   "gis.filters": "Map Filters",
   "gis.farmType": "Farm Type",
