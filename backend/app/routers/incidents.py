@@ -21,7 +21,7 @@ def list_incidents(
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
     incidents = IncidentService.list_incidents(db, farm_id, current_user)
-    return [incident_to_response(i) for i in incidents]
+    return [incident_to_response(i, db) for i in incidents]
 
 
 @router.get("/{incident_id}", response_model=IncidentResponse)
@@ -31,7 +31,7 @@ def get_incident(
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
     incident = IncidentService.get_incident(db, incident_id, current_user)
-    return incident_to_response(incident)
+    return incident_to_response(incident, db)
 
 
 @router.post("", response_model=IncidentResponse, status_code=201)
@@ -62,7 +62,7 @@ async def create_incident(
         evidence_records.append(record)
 
     incident = IncidentService.create_incident(db, payload, current_user, evidence_records)
-    return incident_to_response(incident)
+    return incident_to_response(incident, db)
 
 
 @router.post("/json", response_model=IncidentResponse, status_code=201)
@@ -72,7 +72,7 @@ def create_incident_json(
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
     incident = IncidentService.create_incident(db, payload, current_user)
-    return incident_to_response(incident)
+    return incident_to_response(incident, db)
 
 
 @router.post("/{incident_id}/verify", response_model=IncidentResponse)
@@ -83,4 +83,4 @@ def verify_incident(
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
     incident = IncidentService.verify_incident(db, incident_id, payload, current_user)
-    return incident_to_response(incident)
+    return incident_to_response(incident, db)

@@ -1,5 +1,6 @@
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 
 class Settings(BaseSettings):
@@ -23,10 +24,24 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE_MB: int = 10
     STORAGE_BASE_URL: str = "http://localhost:8000/uploads"
+    PUBLIC_API_URL: str = ""
 
     DEFAULT_DISTRICT_ID: str = "district-ranchi"
 
     API_V1_PREFIX: str = "/api/v1"
+
+    @property
+    def public_api_base(self) -> str:
+        explicit = self.PUBLIC_API_URL.strip()
+        if explicit:
+            return explicit.rstrip("/")
+        render_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+        if render_url:
+            return render_url.rstrip("/")
+        storage = self.STORAGE_BASE_URL.rstrip("/")
+        if storage.endswith("/uploads"):
+            return storage[: -len("/uploads")]
+        return "http://localhost:8000"
 
     @field_validator("DATABASE_URL")
     @classmethod

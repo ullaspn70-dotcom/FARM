@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Calendar } from "lucide-react";
 import type { Farm } from "../../types";
 import { officerService } from "../../services/api";
@@ -57,8 +58,8 @@ export const ScheduleInspectionModal: React.FC<ScheduleInspectionModalProps> = (
     }
   };
 
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
+  return createPortal(
+    <div className="modal-backdrop schedule-modal-backdrop" onClick={onClose}>
       <div className="incident-modal-container schedule-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="header-title-box">
@@ -130,6 +131,7 @@ export const ScheduleInspectionModal: React.FC<ScheduleInspectionModalProps> = (
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

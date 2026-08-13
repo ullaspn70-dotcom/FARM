@@ -1,26 +1,34 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-/** Resolve uploaded file URLs from API (handles relative paths and legacy localhost URLs). */
+/** Resolve uploaded file URLs from API (handles relative paths, legacy localhost, and data URLs). */
 export function resolveMediaUrl(url: string | undefined | null): string {
-  if (!url || url === "#") return "";
+  if (!url) return "";
+  const cleaned = url.trim();
+  if (!cleaned || cleaned === "#") return "";
 
-  if (url.startsWith("http://localhost") || url.startsWith("https://localhost")) {
+  if (cleaned.startsWith("data:")) return cleaned;
+
+  if (cleaned.startsWith("http://localhost") || cleaned.startsWith("https://localhost")) {
     try {
-      const path = new URL(url).pathname;
+      const path = new URL(cleaned).pathname;
       return `${API_BASE.replace(/\/$/, "")}${path}`;
     } catch {
-      return url;
+      return cleaned;
     }
   }
 
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url;
+  if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) {
+    return cleaned;
   }
 
-  const path = url.startsWith("/") ? url : `/${url}`;
+  const path = cleaned.startsWith("/") ? cleaned : `/${cleaned}`;
   return `${API_BASE.replace(/\/$/, "")}${path}`;
 }
 
 export function isImageFile(nameOrUrl: string): boolean {
-  return /\.(jpe?g|png|gif|webp|bmp)$/i.test(nameOrUrl);
+  return /\.(jpe?g|png|gif|webp|bmp)$/i.test(nameOrUrl.split("?")[0]);
+}
+
+export function isPdfFile(nameOrUrl: string): boolean {
+  return /\.pdf$/i.test(nameOrUrl.split("?")[0]);
 }

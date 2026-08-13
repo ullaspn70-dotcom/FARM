@@ -14,6 +14,7 @@ from app.routers import (
     gis,
     health_records,
     incidents,
+    media,
     notifications,
     officer,
     risk,
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     app.include_router(farms.router, prefix=prefix)
     app.include_router(incidents.router, prefix=prefix)
     app.include_router(corrective_actions.router, prefix=prefix)
+    app.include_router(media.router, prefix=prefix)
     app.include_router(risk.router, prefix=prefix)
     app.include_router(gis.router, prefix=prefix)
     app.include_router(officer.router, prefix=prefix)

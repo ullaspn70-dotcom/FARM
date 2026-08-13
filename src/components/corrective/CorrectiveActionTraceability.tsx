@@ -2,6 +2,7 @@ import React from "react";
 import { ArrowDown, Link2 } from "lucide-react";
 import type { CorrectiveAction } from "../../types";
 import { useTranslation } from "../../context/LocaleContext";
+import { EvidencePreview } from "../common/EvidencePreview";
 import { ActionStatusStepper } from "./ActionStatusStepper";
 
 interface CorrectiveActionTraceabilityProps {
@@ -38,8 +39,13 @@ export const CorrectiveActionTraceability: React.FC<CorrectiveActionTraceability
           {action.submittedEvidence && (
             <>
               <ArrowDown size={16} className="trace-arrow" />
-              <div className="trace-step evidence">
-                <span className="trace-label">{action.submittedEvidence.fileName}</span>
+              <div className="trace-step evidence trace-evidence-preview">
+                <EvidencePreview
+                  fileName={action.submittedEvidence.fileName}
+                  fileUrl={action.submittedEvidence.fileUrl}
+                  notes={action.submittedEvidence.notes}
+                  compact
+                />
               </div>
             </>
           )}

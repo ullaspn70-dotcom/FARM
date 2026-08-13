@@ -26,7 +26,7 @@ def list_actions(
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
     actions = CorrectiveActionService.list_actions(db, farm_id, current_user)
-    return [action_to_response(a) for a in actions]
+    return [action_to_response(a, db) for a in actions]
 
 
 @router.post("", response_model=CorrectiveActionResponse, status_code=201)
@@ -36,7 +36,7 @@ def create_action(
     current_user: Annotated[User | None, Depends(require_roles(UserRole.VETERINARIAN, UserRole.OFFICER))] = None,
 ):
     action = CorrectiveActionService.create_action(db, payload, current_user)
-    return action_to_response(action)
+    return action_to_response(action, db)
 
 
 @router.post("/{action_id}/evidence", response_model=CorrectiveActionResponse)
@@ -58,7 +58,7 @@ async def submit_evidence(
         location,
         current_user,
     )
-    return action_to_response(action)
+    return action_to_response(action, db)
 
 
 @router.post("/{action_id}/evidence/json", response_model=CorrectiveActionResponse)
@@ -77,7 +77,7 @@ def submit_evidence_json(
         payload.get("location", ""),
         current_user,
     )
-    return action_to_response(action)
+    return action_to_response(action, db)
 
 
 @router.post("/{action_id}/verify", response_model=CorrectiveActionResponse)
@@ -88,4 +88,4 @@ def verify_action(
     current_user: Annotated[User | None, Depends(require_roles(UserRole.VETERINARIAN, UserRole.OFFICER))] = None,
 ):
     action = CorrectiveActionService.verify_action(db, action_id, payload, current_user)
-    return action_to_response(action)
+    return action_to_response(action, db)

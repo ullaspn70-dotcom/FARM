@@ -1,5 +1,7 @@
 from datetime import date, datetime, timezone
 
+from sqlalchemy.orm import Session
+
 from app.models.corrective_action import ActionEvidence, CorrectiveAction
 from app.models.farm import Farm
 from app.models.incident import Incident, IncidentEvidence
@@ -12,6 +14,7 @@ from app.schemas.gis import GisMapNodeResponse
 from app.schemas.incident import EvidenceFileResponse, IncidentResponse
 from app.schemas.notification import NotificationResponse
 from app.schemas.risk import RiskFactorResponse, RiskHistoryPoint
+from app.services.media_service import MediaService
 from app.utils.helpers import format_relative_time
 
 
@@ -41,7 +44,7 @@ def farm_to_response(farm: Farm) -> FarmResponse:
     )
 
 
-def incident_to_response(incident: Incident) -> IncidentResponse:
+def incident_to_response(incident: Incident, db: Session | None = None) -> IncidentResponse:
     farm = incident.farm
     return IncidentResponse(
         id=incident.id,
@@ -54,7 +57,7 @@ def incident_to_response(incident: Incident) -> IncidentResponse:
         date_time=_format_dt(incident.observed_at),
         description=incident.description,
         location=incident.location,
-        evidence_files=[evidence_file_to_response(e) for e in incident.evidence_files],
+        evidence_files=[evidence_file_to_response(e, db) for e in incident.evidence_files],
         status=incident.status.value,
         severity=incident.severity.value,
         veterinarian_notes=incident.veterinarian_notes,
@@ -64,18 +67,18 @@ def incident_to_response(incident: Incident) -> IncidentResponse:
     )
 
 
-def evidence_file_to_response(evidence: IncidentEvidence) -> EvidenceFileResponse:
+def evidence_file_to_response(evidence: IncidentEvidence, db: Session | None = None) -> EvidenceFileResponse:
     return EvidenceFileResponse(
         name=evidence.file_name,
-        url=evidence.file_url,
+        url=MediaService.resolve_url(db, evidence.file_url),
         timestamp=_format_dt(evidence.uploaded_at),
     )
 
 
-def action_to_response(action: CorrectiveAction) -> CorrectiveActionResponse:
+def action_to_response(action: CorrectiveAction, db: Session | None = None) -> CorrectiveActionResponse:
     submitted = None
     if action.evidence:
-        submitted = evidence_to_submitted(action.evidence)
+        submitted = evidence_to_submitted(action.evidence, db)
     return CorrectiveActionResponse(
         id=action.id,
         farm_id=action.farm_id,
@@ -92,13 +95,13 @@ def action_to_response(action: CorrectiveAction) -> CorrectiveActionResponse:
     )
 
 
-def evidence_to_submitted(evidence: ActionEvidence) -> SubmittedEvidence:
+def evidence_to_submitted(evidence: ActionEvidence, db: Session | None = None) -> SubmittedEvidence:
     ts = evidence.captured_at
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=timezone.utc)
     formatted = ts.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     return SubmittedEvidence(
-        file_url=evidence.file_url,
+        file_url=MediaService.resolve_url(db, evidence.file_url),
         file_name=evidence.file_name,
         timestamp=formatted,
         location=evidence.location or "",

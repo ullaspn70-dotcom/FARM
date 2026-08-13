@@ -1,3 +1,4 @@
+import base64
 import os
 import uuid
 from pathlib import Path
@@ -29,13 +30,19 @@ async def save_upload_file(db, upload: UploadFile) -> FileUpload:
     async with aiofiles.open(file_path, "wb") as out_file:
         await out_file.write(content)
 
-    file_url = f"{settings.STORAGE_BASE_URL.rstrip('/')}/{stored_name}"
+    file_id = uuid.uuid4()
+    content_base64 = base64.b64encode(content).decode("ascii")
+    api_base = settings.public_api_base
+    file_url = f"{api_base}/api/v1/media/{file_id}"
+
     record = FileUpload(
+        id=file_id,
         file_name=upload.filename,
         file_path=str(file_path),
         file_url=file_url,
         mime_type=upload.content_type,
         size_bytes=len(content),
+        content_base64=content_base64,
     )
     db.add(record)
     db.flush()

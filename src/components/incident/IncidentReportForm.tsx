@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { X, ShieldAlert, Upload, CheckCircle2, MapPin, AlertTriangle } from "lucide-react";
-import { incidentService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import { incidentService } from "../../services/api";
 import { useTranslation } from "../../context/LocaleContext";
 import { translateContent } from "../../i18n/contentTranslate";
 
@@ -31,7 +31,7 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
   onClose,
   onSubmitted,
 }) => {
-  const { activeFarm } = useAuth();
+  const { activeFarm, refreshFarms } = useAuth();
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,6 +82,7 @@ export const IncidentReportForm: React.FC<IncidentReportFormProps> = ({
       );
       setSubmitting(false);
       setSubmittedStatus(true);
+      await refreshFarms();
       onSubmitted?.();
     } catch (err) {
       console.error(err);

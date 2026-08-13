@@ -247,7 +247,7 @@ const en: TranslationDictionary = {
   "officer.detail.clickHint": "Click a farm card to view its registered record",
 
   "vet.evidence.open": "Open evidence file",
-  "vet.evidence.unavailable": "File URL unavailable",
+  "vet.evidence.unavailable": "File URL unavailable — re-upload may be required.",
 
   "gis.filters": "Map Filters",
   "gis.farmType": "Farm Type",
