@@ -23,7 +23,7 @@ def get_gis_nodes(
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):
     district_id = None
-    if current_user and current_user.role == UserRole.OFFICER and current_user.district_id:
+    if current_user and current_user.role == UserRole.VETERINARIAN and current_user.district_id:
         district_id = current_user.district_id
     nodes = GisService.get_map_nodes(db, farm_type, risk_level, district_id)
     result = []

@@ -123,7 +123,7 @@ export const passportService = {
 
 export const incidentService = {
   async getIncidents(farmId?: string): Promise<IncidentReport[]> {
-    const query = farmId ? `?farm_id=${encodeURIComponent(farmId)}` : "";
+    const query = farmId ? `?farmId=${encodeURIComponent(farmId)}` : "";
     return apiFetch<IncidentReport[]>(`/incidents${query}`);
   },
 
@@ -172,7 +172,7 @@ export const incidentService = {
 
 export const correctiveActionService = {
   async getActions(farmId?: string): Promise<CorrectiveAction[]> {
-    const query = farmId ? `?farm_id=${encodeURIComponent(farmId)}` : "";
+    const query = farmId ? `?farmId=${encodeURIComponent(farmId)}` : "";
     return apiFetch<CorrectiveAction[]>(`/corrective-actions${query}`);
   },
 
@@ -266,6 +266,20 @@ export const officerService = {
     actionCount: number;
   }> {
     return apiFetch(`/officer/farms/${encodeURIComponent(farmId)}/profile`);
+  },
+
+  async getFarmDetail(farmId: string): Promise<{
+    farm: Farm;
+    incidents: IncidentReport[];
+    actions: CorrectiveAction[];
+    passport: BiosecurityPassport | null;
+    scheduledInspections: ScheduledInspection[];
+    openIncidents: number;
+    openActions: number;
+    incidentCount: number;
+    actionCount: number;
+  }> {
+    return apiFetch(`/officer/farms/${encodeURIComponent(farmId)}/detail`);
   },
 };
 

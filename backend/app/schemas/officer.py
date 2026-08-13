@@ -1,7 +1,9 @@
 from pydantic import Field
 
 from app.schemas.common import CamelModel
-from app.schemas.farm import FarmResponse
+from app.schemas.corrective_action import CorrectiveActionResponse
+from app.schemas.farm import BiosecurityPassportResponse, FarmResponse
+from app.schemas.incident import IncidentResponse
 
 
 class OfficerStatsResponse(CamelModel):
@@ -41,6 +43,20 @@ class InspectionComplete(CamelModel):
 
 class OfficerFarmProfileResponse(CamelModel):
     farm: FarmResponse
+    open_incidents: int = Field(serialization_alias="openIncidents")
+    open_actions: int = Field(serialization_alias="openActions")
+    incident_count: int = Field(serialization_alias="incidentCount")
+    action_count: int = Field(serialization_alias="actionCount")
+
+
+class OfficerFarmDetailResponse(CamelModel):
+    farm: FarmResponse
+    incidents: list[IncidentResponse] = []
+    actions: list[CorrectiveActionResponse] = []
+    passport: BiosecurityPassportResponse | None = None
+    scheduled_inspections: list[InspectionResponse] = Field(
+        default_factory=list, serialization_alias="scheduledInspections"
+    )
     open_incidents: int = Field(serialization_alias="openIncidents")
     open_actions: int = Field(serialization_alias="openActions")
     incident_count: int = Field(serialization_alias="incidentCount")

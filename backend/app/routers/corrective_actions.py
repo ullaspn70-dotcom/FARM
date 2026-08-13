@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, get_optional_user, require_roles
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/corrective-actions", tags=["Corrective Actions"])
 
 @router.get("", response_model=list[CorrectiveActionResponse])
 def list_actions(
-    farm_id: str | None = None,
+    farm_id: str | None = Query(default=None, alias="farmId"),
     db: Session = Depends(get_db),
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):

@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { X, Calendar, MapPin, User, Shield, AlertTriangle, ClipboardList } from "lucide-react";
-import type { Farm, CorrectiveAction, IncidentReport, BiosecurityPassport } from "../../types";
-import {
-  officerService,
-  incidentService,
-  correctiveActionService,
-  passportService,
-} from "../../services/api";
+import type { Farm, CorrectiveAction, IncidentReport, BiosecurityPassport, ScheduledInspection } from "../../types";
+import { officerService } from "../../services/api";
 import { StatusBadge } from "../common/StatusBadge";
 import { useTranslation } from "../../context/LocaleContext";
 import { translateContent } from "../../i18n/contentTranslate";
@@ -28,6 +23,7 @@ export const OfficerFarmDetailModal: React.FC<OfficerFarmDetailModalProps> = ({
   const [profileFarm, setProfileFarm] = useState<Farm | null>(null);
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [actions, setActions] = useState<CorrectiveAction[]>([]);
+  const [scheduledInspections, setScheduledInspections] = useState<ScheduledInspection[]>([]);
   const [passport, setPassport] = useState<BiosecurityPassport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,31 +31,32 @@ export const OfficerFarmDetailModal: React.FC<OfficerFarmDetailModalProps> = ({
   useEffect(() => {
     if (!isOpen || !farm) return;
 
+    const farmId = farm.id;
     let cancelled = false;
     setLoading(true);
     setError("");
+    setProfileFarm(null);
+    setIncidents([]);
+    setActions([]);
+    setScheduledInspections([]);
+    setPassport(null);
 
-    Promise.all([
-      officerService.getFarmProfile(farm.id),
-      incidentService.getIncidents(farm.id),
-      correctiveActionService.getActions(farm.id),
-      passportService.getBiosecurityPassport(farm.id).catch(() => null),
-    ])
-      .then(([profile, farmIncidents, farmActions, passportData]) => {
-        if (!cancelled) {
-          setProfileFarm(profile.farm);
-          setIncidents(farmIncidents);
-          setActions(farmActions);
-          setPassport(passportData);
-        }
+    officerService
+      .getFarmDetail(farmId)
+      .then((detail) => {
+        if (cancelled || detail.farm.id !== farmId) return;
+        setProfileFarm(detail.farm);
+        setIncidents(detail.incidents.filter((item) => item.farmId === farmId));
+        setActions(detail.actions.filter((item) => item.farmId === farmId));
+        setScheduledInspections(
+          detail.scheduledInspections.filter((item) => item.farmId === farmId)
+        );
+        setPassport(detail.passport);
       })
       .catch(() => {
         if (!cancelled) {
           setError(t("officer.detail.error"));
           setProfileFarm(farm);
-          setIncidents([]);
-          setActions([]);
-          setPassport(null);
         }
       })
       .finally(() => {
@@ -69,7 +66,7 @@ export const OfficerFarmDetailModal: React.FC<OfficerFarmDetailModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, farm, t]);
+  }, [isOpen, farm?.id, farm, t]);
 
   if (!isOpen || !farm) return null;
 
@@ -154,6 +151,31 @@ export const OfficerFarmDetailModal: React.FC<OfficerFarmDetailModalProps> = ({
                 </div>
               </div>
             )}
+
+            <div className="officer-detail-section">
+              <h4>
+                <Calendar size={16} /> {t("officer.detail.scheduledInspections")} ({scheduledInspections.length})
+              </h4>
+              {scheduledInspections.length === 0 ? (
+                <p className="text-muted">{t("officer.detail.noScheduledInspections")}</p>
+              ) : (
+                <ul className="officer-detail-list">
+                  {scheduledInspections.map((inspection) => (
+                    <li key={inspection.id}>
+                      <strong>
+                        {new Date(inspection.scheduledAt).toLocaleDateString(undefined, {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </strong>
+                      <StatusBadge type="action" value={inspection.status} size="sm" />
+                      {inspection.notes && <span className="sub-text">{inspection.notes}</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             <div className="officer-detail-section">
               <h4>

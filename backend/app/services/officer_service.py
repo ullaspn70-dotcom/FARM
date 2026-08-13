@@ -132,6 +132,12 @@ class GisService:
 
 class OfficerService:
     @staticmethod
+    def officer_district_scope(user: User | None) -> str | None:
+        if user and user.role == UserRole.OFFICER:
+            return None
+        return user.district_id if user else None
+
+    @staticmethod
     def get_stats(db: Session, district_id: str | None = None) -> dict:
         query = db.query(Farm)
         if district_id:
@@ -230,7 +236,7 @@ class InspectionService:
             title="Inspection Scheduled",
             message=(
                 f"Government biosecurity inspection scheduled for {farm.name} "
-                f"on {scheduled_at.strftime('%d %b %Y')}."
+                f"({farm.id}) on {scheduled_at.strftime('%d %b %Y')}."
             ),
             notification_type=NotificationType.INSPECTION,
             target_role=UserRole.FARMER,

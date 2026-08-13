@@ -32,7 +32,7 @@ class IncidentService:
         elif user and user.role == UserRole.FARMER:
             farm_ids = [a.farm_id for a in user.farm_assignments]
             query = query.filter(Incident.farm_id.in_(farm_ids)) if farm_ids else query.filter(False)
-        elif user and user.district_id:
+        elif user and user.district_id and user.role != UserRole.OFFICER:
             query = query.join(Incident.farm).filter_by(district_id=user.district_id)
         return query.all()
 

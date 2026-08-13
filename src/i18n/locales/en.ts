@@ -218,6 +218,7 @@ const en: TranslationDictionary = {
   "officer.priority.reason.highRisk": "High or critical risk level",
   "officer.priority.reason.spatial": "Nearby high-risk farms in area",
   "officer.priority.empty": "No farms match the selected filters.",
+  "officer.priority.nationalScope": "Showing all registered farms nationwide — each farm card opens that farm's data only.",
 
   "officer.schedule.eyebrow": "GOVERNMENT FIELD COMMAND",
   "officer.schedule.title": "Schedule Biosecurity Inspection",
@@ -245,6 +246,8 @@ const en: TranslationDictionary = {
   "officer.detail.openIncidentsNote": "{{count}} open incident(s) require attention on this farm.",
   "officer.detail.error": "Could not load full farm record. Showing basic info.",
   "officer.detail.clickHint": "Click a farm card to view its registered record",
+  "officer.detail.scheduledInspections": "Scheduled inspections for this farm",
+  "officer.detail.noScheduledInspections": "No scheduled inspections for this farm yet.",
 
   "officer.scheduled.title": "Scheduled Inspections",
   "officer.scheduled.subtitle": "Upcoming field visits in your district",

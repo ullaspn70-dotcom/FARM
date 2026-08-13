@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, Query, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_optional_user
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/incidents", tags=["Incidents"])
 
 @router.get("", response_model=list[IncidentResponse])
 def list_incidents(
-    farm_id: str | None = None,
+    farm_id: str | None = Query(default=None, alias="farmId"),
     db: Session = Depends(get_db),
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ):

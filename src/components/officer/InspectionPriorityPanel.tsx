@@ -153,7 +153,8 @@ export const InspectionPriorityPanel: React.FC<InspectionPriorityPanelProps> = (
         <div>
           <span className="panel-eyebrow">{t("officer.priority.title")}</span>
           <p className="panel-sub">{t("officer.priority.subtitle")}</p>
-          <p className="panel-sub officer-click-hint">{t("officer.detail.clickHint")}</p>
+            <p className="panel-sub officer-click-hint">{t("officer.detail.clickHint")}</p>
+            <p className="panel-sub">{t("officer.priority.nationalScope")}</p>
         </div>
       </div>
 

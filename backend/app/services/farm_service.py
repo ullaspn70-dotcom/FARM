@@ -45,7 +45,8 @@ class FarmService:
                 return []
             query = query.filter(Farm.id.in_(farm_ids))
         elif user and user.district_id and not FarmService._is_demo_farmer(user):
-            query = query.filter(Farm.district_id == user.district_id)
+            if user.role != UserRole.OFFICER:
+                query = query.filter(Farm.district_id == user.district_id)
         return query.order_by(Farm.biosecurity_score.asc()).all()
 
     @staticmethod
@@ -66,6 +67,8 @@ class FarmService:
             allowed = {a.farm_id for a in user.farm_assignments}
             if farm.id not in allowed:
                 raise ForbiddenError("You do not have access to this farm.")
+        elif user.role == UserRole.OFFICER:
+            return
         elif user.district_id and farm.district_id != user.district_id:
             raise ForbiddenError("Farm is outside your district.")
 
