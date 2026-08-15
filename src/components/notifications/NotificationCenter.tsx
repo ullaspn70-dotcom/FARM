@@ -1,12 +1,19 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { X, Bell, ShieldAlert, CheckCircle2, Calendar, AlertTriangle } from "lucide-react";
 import { useNotifications } from "../../context/NotificationContext";
 import { useTranslation } from "../../context/LocaleContext";
 import { translateContent } from "../../i18n/contentTranslate";
 
 export const NotificationCenter: React.FC = () => {
-  const { notifications, isDrawerOpen, setIsDrawerOpen, markAsRead } = useNotifications();
+  const { notifications, isDrawerOpen, setIsDrawerOpen, markAsRead, refreshNotifications } =
+    useNotifications();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (isDrawerOpen) {
+      void refreshNotifications(true);
+    }
+  }, [isDrawerOpen, refreshNotifications]);
 
   if (!isDrawerOpen) return null;
 

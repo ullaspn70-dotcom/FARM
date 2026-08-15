@@ -54,7 +54,7 @@ function scheduleIdle(task: () => void): void {
 
 async function cachedApiGet<T>(
   path: string,
-  options?: { ttlMs?: number; force?: boolean }
+  options?: { ttlMs?: number; force?: boolean; swr?: boolean }
 ): Promise<T> {
   return cachedGet(cacheKey("GET", path), () => apiFetch<T>(path), options);
 }
@@ -242,6 +242,7 @@ export const incidentService = {
     }
     invalidateApiCache("/incidents");
     invalidateApiCache("/farms");
+    invalidateApiCache("/notifications");
     return result;
   },
 
@@ -257,6 +258,7 @@ export const incidentService = {
     invalidateApiCache("/incidents");
     invalidateApiCache("/farms");
     invalidateApiCache("/corrective-actions");
+    invalidateApiCache("/notifications");
     return result;
   },
 
@@ -280,10 +282,16 @@ export const incidentService = {
     actions: ActionPlanItem[]
   ): Promise<{ incidentId: string; actionsCreated: number; actionIds: string[] }> {
     try {
-      return await apiFetch(`/incidents/${incidentId}/action-plan`, {
-        method: "POST",
-        body: JSON.stringify({ actions }),
-      });
+      const result = await apiFetch<{ incidentId: string; actionsCreated: number; actionIds: string[] }>(
+        `/incidents/${incidentId}/action-plan`,
+        {
+          method: "POST",
+          body: JSON.stringify({ actions }),
+        }
+      );
+      invalidateApiCache("/corrective-actions");
+      invalidateApiCache("/notifications");
+      return result;
     } catch (err) {
       if (!isNotFoundError(err)) throw err;
       const actionIds: string[] = [];
@@ -416,6 +424,7 @@ export const correctiveActionService = {
       idempotencyKey
     );
     invalidateApiCache("/corrective-actions");
+    invalidateApiCache("/notifications");
     return correctiveActionService.attachEvidenceAnalysis(result);
   },
 
@@ -438,6 +447,7 @@ export const correctiveActionService = {
     });
     invalidateApiCache("/corrective-actions");
     invalidateApiCache("/farms");
+    invalidateApiCache("/notifications");
     return result;
   },
 
@@ -582,7 +592,11 @@ export const officerService = {
 export const notificationService = {
   async getNotifications(role?: UserRole, options?: { force?: boolean }): Promise<NotificationItem[]> {
     const query = role ? `?role=${encodeURIComponent(role)}` : "";
-    return cachedApiGet<NotificationItem[]>(`/notifications${query}`, options);
+    return cachedApiGet<NotificationItem[]>(`/notifications${query}`, {
+      ...options,
+      ttlMs: 10_000,
+      swr: false,
+    });
   },
 
   async markAsRead(id: string): Promise<void> {

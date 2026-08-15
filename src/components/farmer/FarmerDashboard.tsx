@@ -16,6 +16,7 @@ import { translateContent } from "../../i18n/contentTranslate";
 import { translateData } from "../../i18n/dataTranslations";
 import { StatusBadge } from "../common/StatusBadge";
 import { farmService, incidentService, riskService } from "../../services/api";
+import { NOTIFICATIONS_UPDATED_EVENT } from "../../context/NotificationContext";
 import type { ChecklistItem, IncidentReport, RiskFactor } from "../../types";
 import { useSync } from "../../context/SyncContext";
 import {
@@ -96,6 +97,17 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
       cancelled = true;
     };
   }, [activeFarm.id, t]);
+
+  useEffect(() => {
+    const refreshIncidents = () => {
+      incidentService
+        .getIncidents(activeFarm.id, { force: true })
+        .then((farmIncidents) => setIncidents(farmIncidents))
+        .catch(() => undefined);
+    };
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, refreshIncidents);
+    return () => window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, refreshIncidents);
+  }, [activeFarm.id]);
 
   useEffect(() => {
     let cancelled = false;

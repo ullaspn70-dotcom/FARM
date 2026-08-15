@@ -13,7 +13,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
   const { role, setRole, activeFarm, setActiveFarm, allFarms } = useAuth();
-  const { unreadCount, setIsDrawerOpen } = useNotifications();
+  const { unreadCount, setIsDrawerOpen, refreshNotifications } = useNotifications();
   const { t, locale } = useTranslation();
 
   return (
@@ -99,7 +99,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileNav }) => {
 
           <button
             className="notification-bell-btn"
-            onClick={() => setIsDrawerOpen(true)}
+            onClick={() => {
+              void refreshNotifications(true);
+              setIsDrawerOpen(true);
+            }}
             aria-label="Open notifications"
           >
             <Bell size={20} />

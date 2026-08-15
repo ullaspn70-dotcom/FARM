@@ -184,13 +184,32 @@ class IncidentService:
             RiskEngine.update_farm_counters(db, farm)
 
         if action != "validate":
-            NotificationService.create(
-                db,
-                title=title,
-                message=f"Incident {incident.id} update by Veterinarian Officer.",
-                notification_type=NotificationType.VERIFICATION,
-                target_role=UserRole.FARMER,
-            )
+            farm = incident.farm
+            reason = payload.notes or incident.requested_info_notes or incident.veterinarian_notes or ""
+            if action == "request_info":
+                NotificationService.create(
+                    db,
+                    title="More Information Required",
+                    message=(
+                        f"Incident {incident.id} at {farm.name}: "
+                        f"{incident.requested_info_notes or reason or 'Please upload additional evidence.'}"
+                    ),
+                    notification_type=NotificationType.VERIFICATION,
+                    target_role=UserRole.FARMER,
+                    action_url="/incident",
+                )
+            else:
+                NotificationService.create(
+                    db,
+                    title="Incident Rejected by Veterinarian",
+                    message=(
+                        f"Incident {incident.id} at {farm.name} was rejected. "
+                        f"Reason: {incident.veterinarian_notes or reason or 'No bio-hazard detected.'}"
+                    ),
+                    notification_type=NotificationType.VERIFICATION,
+                    target_role=UserRole.FARMER,
+                    action_url="/incident",
+                )
         db.commit()
         db.refresh(incident)
         return incident

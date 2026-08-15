@@ -1,7 +1,20 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { NotificationItem } from "../types";
 import { notificationService } from "../services/api";
 import { useAuth } from "./AuthContext";
+import { NotificationToast } from "../components/notifications/NotificationToast";
+
+const NOTIFICATION_POLL_MS = 15_000;
+
+export const NOTIFICATIONS_UPDATED_EVENT = "agrisentinel:notifications-updated";
 
 interface NotificationContextType {
   notifications: NotificationItem[];
@@ -18,24 +31,44 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const { role } = useAuth();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [toastNotification, setToastNotification] = useState<NotificationItem | null>(null);
+  const initialLoadDone = useRef(false);
 
   const fetchNotifications = useCallback(async (force = false) => {
     try {
       const items = await notificationService.getNotifications(role, { force });
-      setNotifications(items);
+      setNotifications((prev) => {
+        if (!initialLoadDone.current) {
+          initialLoadDone.current = true;
+          return items;
+        }
+
+        const prevIds = new Set(prev.map((n) => n.id));
+        const newlyArrived = items.filter((n) => !prevIds.has(n.id));
+        if (newlyArrived.length > 0) {
+          setToastNotification(newlyArrived[0]);
+          window.dispatchEvent(new CustomEvent(NOTIFICATIONS_UPDATED_EVENT));
+        }
+        return items;
+      });
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
     }
   }, [role]);
 
   useEffect(() => {
-    const schedule = () => void fetchNotifications();
-    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      const id = window.requestIdleCallback(schedule, { timeout: 2500 });
-      return () => window.cancelIdleCallback(id);
-    }
-    const timer = setTimeout(schedule, 100);
-    return () => clearTimeout(timer);
+    initialLoadDone.current = false;
+    void fetchNotifications(true);
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    const poll = () => {
+      if (document.visibilityState === "visible") {
+        void fetchNotifications(true);
+      }
+    };
+    const interval = window.setInterval(poll, NOTIFICATION_POLL_MS);
+    return () => window.clearInterval(interval);
   }, [fetchNotifications]);
 
   const markAsRead = useCallback(async (id: string) => {
@@ -59,9 +92,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     [notifications, unreadCount, isDrawerOpen, markAsRead, fetchNotifications]
   );
 
+  const openDrawerFromToast = useCallback(() => {
+    setToastNotification(null);
+    void fetchNotifications(true);
+    setIsDrawerOpen(true);
+  }, [fetchNotifications]);
+
   return (
     <NotificationContext.Provider value={value}>
       {children}
+      <NotificationToast
+        notification={toastNotification}
+        onDismiss={() => setToastNotification(null)}
+        onOpen={openDrawerFromToast}
+      />
     </NotificationContext.Provider>
   );
 };

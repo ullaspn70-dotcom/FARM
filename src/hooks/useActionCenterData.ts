@@ -7,7 +7,10 @@ import {
   riskService,
   notificationService,
 } from "../services/api";
+import { NOTIFICATIONS_UPDATED_EVENT } from "../context/NotificationContext";
 import type { UserRole } from "../types";
+
+const ACTION_CENTER_POLL_MS = 20_000;
 
 export interface ActionCenterData {
   farm: Farm | null;
@@ -36,44 +39,56 @@ export function useActionCenterData(farmId: string, role: UserRole): ActionCente
 
   useEffect(() => {
     let cancelled = false;
-    setData((prev) => ({ ...prev, loading: true, error: "" }));
 
-    Promise.all([
-      farmService.getFarm(farmId),
-      riskService.getRiskSummary(farmId).catch(() => null),
-      riskService.getRiskHistory(farmId, 14).catch(() => []),
-      farmService.getChecklist(farmId).catch(() => []),
-      incidentService.getIncidents(farmId).catch(() => []),
-      correctiveActionService.getActions(farmId).catch(() => []),
-      notificationService.getNotifications(role).catch(() => []),
-    ])
-      .then(([farm, summary, history, checklist, incidents, actions, notifications]) => {
-        if (!cancelled) {
-          setData({
-            farm,
-            summary,
-            history,
-            checklist,
-            incidents,
-            actions,
-            notifications: notifications.slice(0, 5),
-            loading: false,
-            error: "",
-          });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setData((prev) => ({
-            ...prev,
-            loading: false,
-            error: "Unable to load action center data.",
-          }));
-        }
-      });
+    const load = () => {
+      setData((prev) => ({ ...prev, loading: prev.farm === null, error: "" }));
+
+      Promise.all([
+        farmService.getFarm(farmId),
+        riskService.getRiskSummary(farmId).catch(() => null),
+        riskService.getRiskHistory(farmId, 14).catch(() => []),
+        farmService.getChecklist(farmId).catch(() => []),
+        incidentService.getIncidents(farmId, { force: true }).catch(() => []),
+        correctiveActionService.getActions(farmId).catch(() => []),
+        notificationService.getNotifications(role, { force: true }).catch(() => []),
+      ])
+        .then(([farm, summary, history, checklist, incidents, actions, notifications]) => {
+          if (!cancelled) {
+            setData({
+              farm,
+              summary,
+              history,
+              checklist,
+              incidents,
+              actions,
+              notifications: notifications.slice(0, 5),
+              loading: false,
+              error: "",
+            });
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setData((prev) => ({
+              ...prev,
+              loading: false,
+              error: "Unable to load action center data.",
+            }));
+          }
+        });
+    };
+
+    load();
+    const onUpdated = () => load();
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, onUpdated);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") load();
+    }, ACTION_CENTER_POLL_MS);
 
     return () => {
       cancelled = true;
+      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, onUpdated);
+      window.clearInterval(interval);
     };
   }, [farmId, role]);
 
