@@ -97,6 +97,13 @@ export const CONTENT_TO_KEY: Record<string, string> = {
   "Evidence Submitted for Verification": "notification.evidenceSubmitted",
   "Biosecurity Score Updated": "notification.scoreUpdated",
   "Inspection Scheduled": "notification.inspectionScheduled",
+  "Incident Verified by Veterinarian": "notification.title.confirmed",
+  "CONFIRMED — Incident Verified by Veterinarian": "notification.title.confirmed",
+  "Incident Rejected by Veterinarian": "notification.title.rejected",
+  "REJECTED — Incident Not Confirmed": "notification.title.rejected",
+  "More Information Required": "notification.title.moreInfo",
+  "ACTION NEEDED — More Information Required": "notification.title.moreInfo",
+  "Incident Info Requested": "notification.title.moreInfo",
   "High mortality reported at Apex Swine Breeding Center (Ramgarh).":
     "notification.msg.incidentHighMortality",
   "GreenValley Bio-Farm submitted evidence for ACT-2026-104 (Disinfection Basin Refill).":

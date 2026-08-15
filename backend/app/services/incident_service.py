@@ -161,7 +161,7 @@ class IncidentService:
             RiskEngine.notify_score_change(db, farm, old_score)
             NotificationService.create(
                 db,
-                title="Incident Verified by Veterinarian",
+                title="CONFIRMED — Incident Verified by Veterinarian",
                 message=(
                     f"Incident {incident.id} has been verified. "
                     f"Biosecurity score updated to {farm.biosecurity_score}/100. "
@@ -189,7 +189,7 @@ class IncidentService:
             if action == "request_info":
                 NotificationService.create(
                     db,
-                    title="More Information Required",
+                    title="ACTION NEEDED — More Information Required",
                     message=(
                         f"Incident {incident.id} at {farm.name}: "
                         f"{incident.requested_info_notes or reason or 'Please upload additional evidence.'}"
@@ -201,7 +201,7 @@ class IncidentService:
             else:
                 NotificationService.create(
                     db,
-                    title="Incident Rejected by Veterinarian",
+                    title="REJECTED — Incident Not Confirmed",
                     message=(
                         f"Incident {incident.id} at {farm.name} was rejected. "
                         f"Reason: {incident.veterinarian_notes or reason or 'No bio-hazard detected.'}"

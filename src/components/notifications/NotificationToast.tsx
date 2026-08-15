@@ -1,8 +1,13 @@
 import React, { useEffect } from "react";
-import { Bell, X } from "lucide-react";
+import { Bell, X, CheckCircle2, XCircle, HelpCircle } from "lucide-react";
 import type { NotificationItem } from "../../types";
 import { useTranslation } from "../../context/LocaleContext";
-import { translateContent } from "../../i18n/contentTranslate";
+import {
+  getVetDecisionStatus,
+  translateNotificationMessage,
+  translateNotificationTitle,
+} from "../../utils/notificationDisplay";
+import { NotificationStatusBadge } from "./NotificationStatusBadge";
 
 interface NotificationToastProps {
   notification: NotificationItem | null;
@@ -25,15 +30,27 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
 
   if (!notification) return null;
 
+  const vetStatus = getVetDecisionStatus(notification);
+  const toastClass = vetStatus ? ` notification-toast-${vetStatus}` : "";
+
   return (
-    <div className="notification-toast" role="alert" aria-live="polite">
+    <div className={`notification-toast${toastClass}`} role="alert" aria-live="polite">
       <button type="button" className="notification-toast-body" onClick={onOpen}>
-        <span className="notification-toast-icon">
-          <Bell size={18} />
+        <span className={`notification-toast-icon${vetStatus ? ` vet-${vetStatus}` : ""}`}>
+          {vetStatus === "confirmed" ? (
+            <CheckCircle2 size={18} />
+          ) : vetStatus === "rejected" ? (
+            <XCircle size={18} />
+          ) : vetStatus === "more_info" ? (
+            <HelpCircle size={18} />
+          ) : (
+            <Bell size={18} />
+          )}
         </span>
         <span className="notification-toast-text">
-          <strong>{translateContent(notification.title, t)}</strong>
-          <span>{translateContent(notification.message, t)}</span>
+          <NotificationStatusBadge notification={notification} />
+          <strong>{translateNotificationTitle(notification.title, t)}</strong>
+          <span>{translateNotificationMessage(notification.message, t)}</span>
         </span>
       </button>
       <button

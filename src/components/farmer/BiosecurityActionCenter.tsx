@@ -9,6 +9,8 @@ import {
   getActiveIncidents,
 } from "../../hooks/useActionCenterData";
 import { StatusBadge } from "../common/StatusBadge";
+import { NotificationStatusBadge } from "../notifications/NotificationStatusBadge";
+import { translateNotificationMessage, translateNotificationTitle } from "../../utils/notificationDisplay";
 import { translateContent } from "../../i18n/contentTranslate";
 import { translateData } from "../../i18n/dataTranslations";
 import { ScoreTrendChart } from "./ScoreTrendChart";
@@ -165,8 +167,9 @@ export const BiosecurityActionCenter: React.FC<BiosecurityActionCenterProps> = (
             <ul className="ac-alerts-list">
               {notifications.map((n) => (
                 <li key={n.id} className={n.read ? "" : "unread"}>
-                  <strong>{translateContent(n.title, t)}</strong>
-                  <span>{translateContent(n.message, t)}</span>
+                  <NotificationStatusBadge notification={n} compact />
+                  <strong>{translateNotificationTitle(n.title, t)}</strong>
+                  <span>{translateNotificationMessage(n.message, t)}</span>
                 </li>
               ))}
             </ul>

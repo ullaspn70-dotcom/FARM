@@ -351,6 +351,9 @@ const en: TranslationDictionary = {
 
   "notification.title": "Notification Center",
   "notification.empty": "No notifications at this time.",
+  "notification.vetStatus.confirmed": "CONFIRMED",
+  "notification.vetStatus.rejected": "REJECTED",
+  "notification.vetStatus.moreInfo": "MORE INFO NEEDED",
 
   "sidebar.quickActions": "Quick Actions",
   "sidebar.aarohiTitle": "Aarohi AI Assistant",
@@ -458,6 +461,17 @@ const en: TranslationDictionary = {
     "GreenValley Bio-Farm biosecurity score increased to 78/100 (+4 points).",
   "notification.msg.inspectionSunrise":
     "Routine biosecurity inspection assigned for SunRise Poultry Haven on Aug 14.",
+  "notification.msg.incidentVerified":
+    "Your incident {{id}} was CONFIRMED by the veterinarian. Biosecurity score is now {{score}}/100. {{note}}",
+  "notification.msg.incidentRejected":
+    "Your incident {{id}} at {{farm}} was REJECTED by the veterinarian. Reason: {{reason}}",
+  "notification.msg.incidentMoreInfo":
+    "The veterinarian needs more information for incident {{id}} at {{farm}}: {{request}}",
+  "notification.msg.incidentVetUpdateLegacy":
+    "Incident {{id}} was reviewed by the veterinarian. Open notifications or incidents for the latest status.",
+  "notification.title.confirmed": "CONFIRMED — Incident Verified by Veterinarian",
+  "notification.title.rejected": "REJECTED — Incident Not Confirmed",
+  "notification.title.moreInfo": "ACTION NEEDED — More Information Required",
 
   "content.incident.respiratoryScreening": "Respiratory screening",
   "content.incident.biosecurityEquipment": "Biosecurity equipment check",

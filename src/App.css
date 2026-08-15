@@ -1568,6 +1568,39 @@
 .notifications-list { padding: 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
 .notif-card { padding: 14px; border: 1px solid #E2E8F0; border-radius: 10px; background: #F8FAFC; cursor: pointer; }
 .notif-card.unread { background: #EFF6FF; border-color: #BFDBFE; }
+.notif-card-confirmed { border-color: #86EFAC; background: #F0FDF4; }
+.notif-card-rejected { border-color: #FCA5A5; background: #FEF2F2; }
+.notif-card-more_info { border-color: #FCD34D; background: #FFFBEB; }
+.notif-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.notif-title-block { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.notif-title { font-size: 14px; color: #0F172A; line-height: 1.35; }
+.notif-time { font-size: 11px; color: #64748B; white-space: nowrap; }
+.notif-message { margin: 0; font-size: 13px; color: #475569; line-height: 1.45; }
+.notif-type-icon {
+  width: 28px; height: 28px; border-radius: 999px;
+  display: grid; place-items: center; flex-shrink: 0;
+  background: #E2E8F0; color: #475569;
+}
+.notif-type-icon.vet-confirmed { background: #DCFCE7; color: #15803D; }
+.notif-type-icon.vet-rejected { background: #FEE2E2; color: #DC2626; }
+.notif-type-icon.vet-more_info { background: #FEF3C7; color: #B45309; }
+.notif-vet-status {
+  display: inline-flex; align-self: flex-start;
+  padding: 3px 8px; border-radius: 999px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+}
+.notif-vet-status-confirmed { background: #DCFCE7; color: #166534; }
+.notif-vet-status-rejected { background: #FEE2E2; color: #B91C1C; }
+.notif-vet-status-more_info { background: #FEF3C7; color: #92400E; }
+.notif-vet-status.compact { margin-bottom: 4px; }
+.notification-toast-confirmed { border-color: #86EFAC; }
+.notification-toast-rejected { border-color: #FCA5A5; }
+.notification-toast-more_info { border-color: #FCD34D; }
+.notification-toast-icon.vet-confirmed { background: #DCFCE7; color: #15803D; }
+.notification-toast-icon.vet-rejected { background: #FEE2E2; color: #DC2626; }
+.notification-toast-icon.vet-more_info { background: #FEF3C7; color: #B45309; }
+.ac-alerts-list li { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.ac-alerts-list li.unread strong { color: #0F172A; }
 
 /* ==========================================================================
    MOBILE & RESPONSIVE LAYOUT (MODULE 12)

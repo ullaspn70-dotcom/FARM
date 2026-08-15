@@ -275,6 +275,18 @@ const hiOverrides: TranslationDictionary = {
   "status.farmType.mixed": "मिश्रित फarm",
   "notification.title": "सूचना केंद्र",
   "notification.empty": "अभी कोई सूचना नहीं।",
+  "notification.vetStatus.confirmed": "पुष्टि की गई",
+  "notification.vetStatus.rejected": "अस्वीकृत",
+  "notification.vetStatus.moreInfo": "अधिक जानकारी चाहिए",
+  "notification.msg.incidentVerified":
+    "आपकी घटना {{id}} पशु चिकित्सक द्वारा पुष्टि की गई। जैव सुरक्षा स्कोर अब {{score}}/100 है। {{note}}",
+  "notification.msg.incidentRejected":
+    "आपकी घटना {{id}} ({{farm}}) पशु चिकित्सक द्वारा अस्वीकृत की गई। कारण: {{reason}}",
+  "notification.msg.incidentMoreInfo":
+    "घटना {{id}} ({{farm}}) के लिए पशु चिकित्सक को अधिक जानकारी चाहिए: {{request}}",
+  "notification.title.confirmed": "पुष्टि — पशु चिकित्सक ने घटना सत्यापित की",
+  "notification.title.rejected": "अस्वीकृत — घटना पुष्टि नहीं हुई",
+  "notification.title.moreInfo": "कार्रवाई आवश्यक — अधिक जानकारी चाहिए",
   "sidebar.quickActions": "त्वरित कार्य",
   "sidebar.aarohiTitle": "आरोही AI सहायक",
   "sidebar.aarohiSub": "जैव सुरक्षा सलाह — सुझाव के लिए क्लिक करें",
