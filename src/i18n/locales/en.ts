@@ -470,7 +470,7 @@ const en: TranslationDictionary = {
   "notification.msg.incidentVetUpdateLegacy":
     "Incident {{id}} was reviewed by the veterinarian. Open notifications or incidents for the latest status.",
   "notification.title.confirmed": "CONFIRMED — Incident Verified by Veterinarian",
-  "notification.title.rejected": "REJECTED — Incident Not Confirmed",
+  "notification.title.rejected": "REJECTED — Incident Declined by Veterinarian",
   "notification.title.moreInfo": "ACTION NEEDED — More Information Required",
 
   "content.incident.respiratoryScreening": "Respiratory screening",

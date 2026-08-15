@@ -201,9 +201,9 @@ class IncidentService:
             else:
                 NotificationService.create(
                     db,
-                    title="REJECTED — Incident Not Confirmed",
+                    title="REJECTED — Incident Declined by Veterinarian",
                     message=(
-                        f"Incident {incident.id} at {farm.name} was rejected. "
+                        f"Incident {incident.id} at {farm.name} was rejected by the veterinarian. "
                         f"Reason: {incident.veterinarian_notes or reason or 'No bio-hazard detected.'}"
                     ),
                     notification_type=NotificationType.VERIFICATION,

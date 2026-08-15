@@ -11,6 +11,7 @@ import type { NotificationItem } from "../types";
 import { notificationService } from "../services/api";
 import { useAuth } from "./AuthContext";
 import { NotificationToast } from "../components/notifications/NotificationToast";
+import { pickVetDecisionNotification } from "../utils/notificationDisplay";
 
 const NOTIFICATION_POLL_MS = 15_000;
 
@@ -46,7 +47,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         const prevIds = new Set(prev.map((n) => n.id));
         const newlyArrived = items.filter((n) => !prevIds.has(n.id));
         if (newlyArrived.length > 0) {
-          setToastNotification(newlyArrived[0]);
+          const toastTarget =
+            pickVetDecisionNotification(newlyArrived) ?? newlyArrived[0];
+          setToastNotification(toastTarget);
           window.dispatchEvent(new CustomEvent(NOTIFICATIONS_UPDATED_EVENT));
         }
         return items;

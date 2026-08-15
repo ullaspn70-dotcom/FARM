@@ -101,6 +101,7 @@ export const CONTENT_TO_KEY: Record<string, string> = {
   "CONFIRMED — Incident Verified by Veterinarian": "notification.title.confirmed",
   "Incident Rejected by Veterinarian": "notification.title.rejected",
   "REJECTED — Incident Not Confirmed": "notification.title.rejected",
+  "REJECTED — Incident Declined by Veterinarian": "notification.title.rejected",
   "More Information Required": "notification.title.moreInfo",
   "ACTION NEEDED — More Information Required": "notification.title.moreInfo",
   "Incident Info Requested": "notification.title.moreInfo",
